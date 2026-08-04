@@ -1,0 +1,17 @@
+# Template: copy to .github/workflows/ci.yml in a Go repo (library or web
+# app). Unlike cut-release.yml/cut-tag.yml, this needs no local logic — the
+# whole thing runs in KVG_Standards via workflow_call, triggered normally.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    uses: gerp93/KVG_Standards/.github/workflows/ci-go.yml@main
+    with:
+      working_directory: src # "." for gameshell-framework, "src" for card-judge/timeline-trivia

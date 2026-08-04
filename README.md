@@ -1,0 +1,53 @@
+# KVG_Standards
+
+Source of truth for how gerp93 app repos build, release, and theme
+themselves — so that "the standard" lives in one place and repos pull from
+it, instead of each repo growing its own copy that quietly drifts.
+
+## What lives here
+
+- **`.github/workflows/`** — reusable (`workflow_call`) build+release
+  workflows. Repos don't copy these; they call them by tag
+  (`uses: gerp93/KVG_Standards/.github/workflows/<name>.yml@main`).
+- **`templates/`** — small per-repo entry-point workflows that *do* get
+  copied in (GitHub requires `workflow_dispatch` triggers to live in the
+  calling repo — see comments in each template for why). These are
+  intentionally thin; all the real logic lives in `.github/workflows/`.
+- **`.claude/skills/app-standards/`** — a Claude Code skill encoding these
+  conventions, so a new app repo (or an audit of an existing one) picks
+  them up automatically. See its `SKILL.md` for what it checks.
+
+## Theming
+
+Theme source of truth is [VisualAssault](https://github.com/gerp93/VisualAssault)
+(CSS, Tkinter, Flet, and Angular packages, deterministically generated from
+`themes/THEMES.md`). Consumers must pin to a released tag
+(`@vX.Y.Z`), never `@main` — see `themes-versioning.md`.
+
+## Release workflow catalog
+
+| Workflow | For | Used by |
+|---|---|---|
+| `release-python-gui.yml` | PyInstaller-packaged Python GUI apps | KVGrainy, KVGroove, kvg_converter |
+| `release-go-gui.yml` | Wails (Go) desktop apps | gameshell-deploy (gui/) |
+| `release-electron.yml` | Electron desktop apps | sweeper |
+| `release-flet.yml` | Flet desktop apps | kvgenius |
+| `ci-go.yml` | Go build+vet gate (library or web app) | gameshell-framework, card-judge, timeline-trivia |
+
+There's no `release-go-binary.yml`/similar for plain CLI-only Go apps in
+this catalog on purpose: `card-judge` and `timeline-trivia` are Go *web
+apps* deployed by [gameshell-deploy](https://github.com/gerp93/gameshell-deploy)
+via DigitalOcean App Platform's own GitHub integration (it builds their
+`Dockerfile` directly on push) — they have no GitHub-Release-binary release
+step at all, just the CI gate above. `gameshell-framework` is a Go
+*library*; its "release" is a bare semver tag for `go.mod` pinning
+(`templates/cut-tag.yml`), no build artifact either.
+
+## Adding a new consumer repo
+
+1. Pick the right release workflow from the table above (or note that none
+   apply, like the Go-web-app case).
+2. Copy the matching template(s) from `templates/` into the repo's
+   `.github/workflows/`, filling in the `TODO`s.
+3. If it's an existing repo with a local release/build workflow already,
+   remove that workflow — don't run both.

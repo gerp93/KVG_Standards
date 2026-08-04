@@ -1,0 +1,98 @@
+name: Release (Flet)
+
+# Reusable build+release workflow for Flet desktop apps, packaged via the
+# `flet build` CLI. New variant (no existing app used this before kvgenius)
+# — same shape as release-python-gui.yml (PyInstaller) and
+# release-electron.yml: matrix build across the 3 desktop OSes, then one
+# GitHub Release with all artifacts attached. Callers tag first (see
+# templates/cut-release.yml), then call this with that tag.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3'
+        required: true
+        type: string
+      app_name:
+        description: 'Display name for the built app, e.g. KVGenius'
+        required: true
+        type: string
+      entry_point:
+        description: 'Flet app entry script, e.g. desktop_app.py'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "flet[all]"
+
+      - name: Build with Flet
+        shell: bash
+        run: flet build ${{ matrix.platform }} --project "${{ inputs.app_name }}" "${{ inputs.entry_point }}"
+
+      - name: Stage release package
+        shell: bash
+        run: |
+          set -e
+          STAGE="${{ inputs.app_name }}-${{ inputs.version }}-${{ matrix.platform }}"
+          OUT_DIR=$(find build -maxdepth 1 -mindepth 1 -type d | head -n 1)
+          mkdir -p "$STAGE"
+          cp -r "$OUT_DIR"/. "$STAGE/"
+
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            7z a -tzip "${STAGE}.zip" "$STAGE" > /dev/null
+            echo "ASSET_PATH=${STAGE}.zip" >> "$GITHUB_ENV"
+          else
+            tar czf "${STAGE}.tar.gz" "$STAGE"
+            echo "ASSET_PATH=${STAGE}.tar.gz" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.platform }}
+          path: ${{ env.ASSET_PATH }}
+
+  release:
+    needs: build
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: package-*
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.app_name }} ${{ inputs.version }}
+          files: dist/*
+          generate_release_notes: true

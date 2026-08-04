@@ -1,0 +1,137 @@
+name: Release (Python GUI / PyInstaller)
+
+# Reusable build+release workflow for PyInstaller-packaged Python desktop
+# apps (Tkinter, or any other GUI toolkit PyInstaller can bundle). Callers
+# tag first (see templates/cut-release.yml), then call this with that tag.
+#
+# Contract: the caller's repo must have a `requirements.txt` at its root
+# that PyInstaller can install against, and `entry_point` must be a script
+# that runs the GUI directly (no CLI dispatch needed).
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3'
+        required: true
+        type: string
+      app_name:
+        description: 'Display name for the built executable, e.g. KVGrainy'
+        required: true
+        type: string
+      entry_point:
+        description: 'Python script PyInstaller should build, e.g. gui.py'
+        required: true
+        type: string
+      windowed:
+        description: 'Build with --windowed (no console window)'
+        required: false
+        type: boolean
+        default: true
+      extra_add_data:
+        description: 'Extra --add-data entries, semicolon-separated (e.g. "LICENSE:.;assets:assets")'
+        required: false
+        type: string
+        default: ''
+      version_file:
+        description: 'If set, write __version__ = "X.Y.Z" to this path before building (e.g. _version.py)'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset_name: ${{ inputs.app_name }}-linux
+            dist_name: ${{ inputs.app_name }}
+          - os: windows-latest
+            asset_name: ${{ inputs.app_name }}-windows.exe
+            dist_name: ${{ inputs.app_name }}.exe
+          - os: macos-latest
+            asset_name: ${{ inputs.app_name }}-macos
+            dist_name: ${{ inputs.app_name }}
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Tk for system Python (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-tk python3-venv
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+
+      - name: Write version file
+        if: inputs.version_file != ''
+        shell: bash
+        run: echo "__version__ = \"${{ inputs.version }}\"" | sed 's/^v//' > "${{ inputs.version_file }}"
+
+      - name: Build executable
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then SEP=";"; else SEP=":"; fi
+
+          ADD_DATA_ARGS=()
+          if [ -f "LICENSE" ]; then
+            ADD_DATA_ARGS+=(--add-data "LICENSE${SEP}.")
+          fi
+          if [ -n "${{ inputs.extra_add_data }}" ]; then
+            IFS=';' read -ra EXTRA <<< "${{ inputs.extra_add_data }}"
+            for entry in "${EXTRA[@]}"; do
+              ADD_DATA_ARGS+=(--add-data "${entry//:/$SEP}")
+            done
+          fi
+
+          WINDOWED_ARG=()
+          if [ "${{ inputs.windowed }}" = "true" ]; then WINDOWED_ARG=(--windowed); fi
+
+          python -m PyInstaller --noconfirm --onefile "${WINDOWED_ARG[@]}" \
+            --name "${{ inputs.app_name }}" "${ADD_DATA_ARGS[@]}" "${{ inputs.entry_point }}"
+
+      - name: Stage artifact
+        shell: bash
+        run: |
+          mkdir -p release_out
+          cp "dist/${{ matrix.dist_name }}" "release_out/${{ matrix.asset_name }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset_name }}
+          path: release_out/${{ matrix.asset_name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release_assets
+          find artifacts -type f -exec cp {} release_assets/ \;
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.app_name }} ${{ inputs.version }}
+          files: release_assets/*
+          generate_release_notes: true

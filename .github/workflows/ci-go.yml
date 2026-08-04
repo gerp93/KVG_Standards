@@ -1,0 +1,37 @@
+name: CI (Go)
+
+# Reusable build+vet gate for Go repos — libraries (gameshell-framework) and
+# web apps deployed elsewhere (card-judge, timeline-trivia, deployed via
+# gameshell-deploy/DigitalOcean App Platform rather than a GitHub Release
+# binary). Runs on every push/PR the caller wires it to.
+
+on:
+  workflow_call:
+    inputs:
+      working_directory:
+        description: 'Directory containing go.mod (e.g. "src" for card-judge/timeline-trivia, "." for gameshell-framework)'
+        required: false
+        type: string
+        default: '.'
+      go_version:
+        required: false
+        type: string
+        default: '1.22'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+
+      - name: Build
+        working-directory: ${{ inputs.working_directory }}
+        run: go build ./...
+
+      - name: Vet
+        working-directory: ${{ inputs.working_directory }}
+        run: go vet ./...

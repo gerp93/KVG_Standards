@@ -1,0 +1,144 @@
+name: Release (Go GUI / Wails)
+
+# Reusable build+release workflow for Wails (Go) desktop apps. Modeled on
+# gameshell-deploy's original release.yml, generalized so any Wails app can
+# call it. Callers tag first (see templates/cut-release.yml), then call
+# this with that tag.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3'
+        required: true
+        type: string
+      app_name:
+        description: 'Base name for the built binary/package, e.g. gameshell-deploy-gui'
+        required: true
+        type: string
+      gui_dir:
+        description: 'Directory containing the Wails app (its wails.json)'
+        required: false
+        type: string
+        default: 'gui'
+      go_version:
+        required: false
+        type: string
+        default: '1.25'
+      node_version:
+        required: false
+        type: string
+        default: '20'
+      extra_stage_paths:
+        description: 'Space-separated extra files/dirs (relative to repo root) to copy alongside the binary in the release package'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+          - os: ubuntu-latest
+            platform: linux
+          - os: macos-latest
+            platform: macos
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go_version }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Add Go bin to PATH
+        shell: bash
+        run: echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+
+      - name: Install Wails CLI
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+      # Ubuntu 24.04 (ubuntu-latest) only ships webkit2gtk 4.1's dev package,
+      # not the older 4.0 Wails v2 defaults to — build with the 4.1 tag.
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build GUI
+        working-directory: ${{ inputs.gui_dir }}
+        shell: bash
+        run: |
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            wails build -tags webkit2_41
+          else
+            wails build
+          fi
+
+      - name: Stage release package
+        id: stage
+        shell: bash
+        run: |
+          set -e
+          STAGE="${{ inputs.app_name }}-${{ inputs.version }}-${{ matrix.platform }}"
+          mkdir -p "$STAGE"
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            APP_BUNDLE=$(find "${{ inputs.gui_dir }}/build/bin" -maxdepth 1 -name '*.app')
+            cp -r "$APP_BUNDLE" "$STAGE/"
+            BIN_NAME=$(basename "$APP_BUNDLE" .app)
+            chmod +x "$STAGE/$(basename "$APP_BUNDLE")/Contents/MacOS/$BIN_NAME"
+          elif [ "${{ matrix.platform }}" = "windows" ]; then
+            BIN=$(find "${{ inputs.gui_dir }}/build/bin" -maxdepth 1 -name '*.exe')
+            cp "$BIN" "$STAGE/"
+          else
+            BIN=$(find "${{ inputs.gui_dir }}/build/bin" -maxdepth 1 -type f)
+            cp "$BIN" "$STAGE/"
+            chmod +x "$STAGE"/* || true
+          fi
+
+          if [ -n "${{ inputs.extra_stage_paths }}" ]; then
+            cp -r ${{ inputs.extra_stage_paths }} "$STAGE/"
+          fi
+
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            7z a -tzip "${STAGE}.zip" "$STAGE" > /dev/null
+            echo "ASSET_PATH=${STAGE}.zip" >> "$GITHUB_ENV"
+          else
+            tar czf "${STAGE}.tar.gz" "$STAGE"
+            echo "ASSET_PATH=${STAGE}.tar.gz" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.platform }}
+          path: ${{ env.ASSET_PATH }}
+
+  release:
+    needs: build
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: package-*
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: dist/*
+          generate_release_notes: true

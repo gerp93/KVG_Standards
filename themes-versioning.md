@@ -29,6 +29,29 @@ downloaded `releases/vX.Y.Z/*.zip`, not `main`.
    deterministic from `THEMES.md`, but a version bump can still add/rename
    themes.
 
+## Go / static-asset consumers (no package manager)
+
+Go has no npm/pip-style git-subdirectory dependency mechanism, and CSS
+consumed by a plain HTTP server isn't "installed" at all — so for
+[gameshell-framework](https://github.com/gerp93/gameshell-framework) (which
+serves `static/css/colors.css` to every Go game via its `/gs/` mount), the
+tag-pinning principle is applied by **vendoring a pinned copy** instead:
+
+- The theme color blocks in `colors.css` are a verbatim copy of
+  VisualAssault's `packages/css/themes.css` at a specific tag, marked with a
+  comment noting the source tag and "do not hand-edit."
+- `scripts/update-visual-assault-css.sh <tag>` re-fetches that file from a
+  given VisualAssault tag and splices it back in — the deliberate,
+  reviewable equivalent of bumping a pinned version string.
+- This is exactly the same failure mode as `@main` if skipped: gameshell-framework's
+  vendored copy was found already stale (missing tokens VisualAssault added
+  after `v0.1.0`) because it was a one-time copy-paste with no re-vendor
+  step, not a pinned version anyone remembered to bump.
+
+Any other Go (or plain static-HTML) consumer should follow the same
+pattern: vendor a marked, tag-sourced copy plus a re-vendor script, never a
+silent hand-copy.
+
 ## "Vibe install" mode
 
 For apps that don't want a real package dependency (one-off scripts,

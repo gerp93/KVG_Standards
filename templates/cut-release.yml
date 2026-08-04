@@ -71,6 +71,7 @@ jobs:
     #   release-go-gui.yml      (Wails)
     #   release-electron.yml    (Electron)
     #   release-flet.yml        (Flet)
+    #   release-streamdeck.yml  (Elgato Stream Deck plugin)
     uses: gerp93/KVG_Standards/.github/workflows/release-python-gui.yml@main
     with:
       version: ${{ needs.tag.outputs.version }}

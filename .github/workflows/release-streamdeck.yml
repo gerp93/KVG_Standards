@@ -1,0 +1,95 @@
+name: Release (Stream Deck plugin)
+
+# Reusable build+release workflow for Elgato Stream Deck plugins (plain
+# Node.js, no compiler — Stream Deck runs the plugin folder's JS directly).
+# New variant (first consumer: kvgauge). No OS matrix needed: unlike the
+# other release-*.yml workflows, there's no native binary to build per
+# platform — the same .streamDeckPlugin (a zipped plugin folder with
+# production node_modules bundled in) runs on every OS Stream Deck itself
+# supports. Callers tag first (see templates/cut-release.yml), then call
+# this with that tag.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3'
+        required: true
+        type: string
+      plugin_name:
+        description: 'Output file base name, e.g. kvgauge (produces kvgauge.streamDeckPlugin)'
+        required: true
+        type: string
+      plugin_dir:
+        description: 'Directory containing manifest.json, e.g. com.gerp93.kvgauge.sdPlugin'
+        required: true
+        type: string
+      node_version:
+        required: false
+        type: string
+        default: '20'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Install production dependencies into the plugin folder
+        working-directory: ${{ inputs.plugin_dir }}
+        run: npm ci --omit=dev
+
+      - name: Sync manifest.json Version with the release tag
+        shell: bash
+        run: |
+          set -e
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          MANIFEST="${{ inputs.plugin_dir }}/manifest.json"
+          node -e "
+            const fs = require('fs');
+            const path = '$MANIFEST';
+            const manifest = JSON.parse(fs.readFileSync(path, 'utf8'));
+            manifest.Version = '$VERSION';
+            fs.writeFileSync(path, JSON.stringify(manifest, null, 4) + '\n');
+          "
+
+      - name: Package .streamDeckPlugin
+        shell: bash
+        run: |
+          set -e
+          OUT="${{ inputs.plugin_name }}.streamDeckPlugin"
+          # A .streamDeckPlugin is just a zip of the plugin folder with that
+          # extension — no special tooling needed to produce one.
+          cd "$(dirname "${{ inputs.plugin_dir }}")"
+          zip -r -X "$OLDPWD/$OUT" "$(basename "${{ inputs.plugin_dir }}")" \
+            -x "*/.git/*"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.plugin_name }}-streamdeck-plugin
+          path: ${{ inputs.plugin_name }}.streamDeckPlugin
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.plugin_name }} ${{ inputs.version }}
+          files: dist/*.streamDeckPlugin
+          generate_release_notes: true

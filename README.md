@@ -32,6 +32,7 @@ Theme source of truth is [VisualAssault](https://github.com/gerp93/VisualAssault
 | `release-go-gui.yml` | Wails (Go) desktop apps | gameshell-deploy (gui/) |
 | `release-electron.yml` | Electron desktop apps | sweeper |
 | `release-flet.yml` | Flet desktop apps | kvgenius |
+| `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
 | `ci-go.yml` | Go build+vet gate (library or web app) | gameshell-framework, card-judge, timeline-trivia |
 
 There's no `release-go-binary.yml`/similar for plain CLI-only Go apps in

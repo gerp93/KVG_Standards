@@ -34,15 +34,22 @@ First classify the repo — the shape of "release" differs by category:
 |---|---|---|
 | Go library | `go.mod` at root, no `main` package meant to run standalone, other repos import it | `templates/cut-tag.yml` only — bare semver tag, no build |
 | Go web app | Has a `Dockerfile`, deployed via [gameshell-deploy](https://github.com/gerp93/gameshell-deploy) / DigitalOcean App Platform | `templates/ci.yml` (build+vet) only. **No** GitHub-Release-binary workflow — deploy happens on push via DO's own GitHub integration, not a release artifact. If one exists, it's vestigial; remove it. |
-| Desktop GUI app | Ships a binary/installer end users download | Tag via `templates/cut-release.yml`, calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet) |
+| Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-streamdeck.yml` for a Stream Deck plugin) |
 | Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. Flag it for a human decision instead of guessing. |
+
+Desktop GUI apps/plugins get **both** release triggers, not one or the
+other: `auto-release.yml` ships a release on every commit to `main` by
+default (this is the org's actual expectation — don't default to
+manual-only), and `cut-release.yml` stays available for a deliberately
+chosen version number when you want one instead of the auto-bump.
 
 **Violations to flag:**
 - A local copy of build/release logic that duplicates a `KVG_Standards`
   reusable workflow instead of calling it via `uses:`.
-- A release workflow whose trigger/versioning scheme differs from
-  `templates/cut-release.yml`'s (explicit `workflow_dispatch` version input,
-  not auto-bump-on-push or a hand-maintained `version_bump.sh`).
+- A desktop GUI app/plugin repo with only `cut-release.yml` and no
+  `auto-release.yml` (or vice versa) — it needs both.
+- A hand-maintained `version_bump.sh` or other bespoke versioning script
+  duplicating what `auto-release.yml`/`cut-release.yml` already do.
 - Two repos independently reinventing the same script (e.g. a copy-pasted
   `version_bump.sh`) — that's exactly the drift this repo exists to stop;
   it belongs in `KVG_Standards` instead.

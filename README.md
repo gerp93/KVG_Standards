@@ -44,11 +44,25 @@ step at all, just the CI gate above. `gameshell-framework` is a Go
 *library*; its "release" is a bare semver tag for `go.mod` pinning
 (`templates/cut-tag.yml`), no build artifact either.
 
+## Release triggers: both, always
+
+Every repo with a `release-*.yml` pipeline gets **both**:
+
+- **`templates/auto-release.yml`** — fires on every push to `main`.
+  Conventional-commit-driven version bump (`mathieudutour/github-tag-action`),
+  no manual step. This is the default, always-on path.
+- **`templates/cut-release.yml`** — `workflow_dispatch` with an explicit
+  version, for when you want a specific number instead of whatever the
+  auto-bump would produce.
+
+Both call the same `release-*.yml` build variant; they just get the version
+number differently. Don't ship a repo with only one of the two.
+
 ## Adding a new consumer repo
 
 1. Pick the right release workflow from the table above (or note that none
    apply, like the Go-web-app case).
-2. Copy the matching template(s) from `templates/` into the repo's
-   `.github/workflows/`, filling in the `TODO`s.
+2. Copy **both** `templates/auto-release.yml` and `templates/cut-release.yml`
+   into the repo's `.github/workflows/`, filling in the `TODO`s in each.
 3. If it's an existing repo with a local release/build workflow already,
    remove that workflow — don't run both.

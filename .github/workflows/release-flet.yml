@@ -54,7 +54,15 @@ jobs:
 
       - name: Build with Flet
         shell: bash
-        run: flet build ${{ matrix.platform }} --project "${{ inputs.app_name }}" "${{ inputs.entry_point }}"
+        run: |
+          set -e
+          # flet build takes the app DIRECTORY as its positional arg (default
+          # "."), not an entry-point filename — the entry module (without
+          # .py) is named via --module-name, defaulting to "main" otherwise.
+          MODULE_NAME="${ENTRY_POINT%.py}"
+          flet build ${{ matrix.platform }} --project "${{ inputs.app_name }}" --module-name "$MODULE_NAME"
+        env:
+          ENTRY_POINT: ${{ inputs.entry_point }}
 
       - name: Stage release package
         shell: bash

@@ -46,17 +46,20 @@ jobs:
   build:
     strategy:
       fail-fast: false
+      # Static values only — the `inputs` context isn't available inside
+      # strategy.matrix (unlike steps/run/with), so app_name-derived names
+      # are computed per-step below instead of baked in here.
       matrix:
         include:
           - os: ubuntu-latest
-            asset_name: ${{ inputs.app_name }}-linux
-            dist_name: ${{ inputs.app_name }}
+            platform: linux
+            ext: ''
           - os: windows-latest
-            asset_name: ${{ inputs.app_name }}-windows.exe
-            dist_name: ${{ inputs.app_name }}.exe
+            platform: windows
+            ext: '.exe'
           - os: macos-latest
-            asset_name: ${{ inputs.app_name }}-macos
-            dist_name: ${{ inputs.app_name }}
+            platform: macos
+            ext: ''
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -108,12 +111,15 @@ jobs:
         shell: bash
         run: |
           mkdir -p release_out
-          cp "dist/${{ matrix.dist_name }}" "release_out/${{ matrix.asset_name }}"
+          DIST_NAME="${{ inputs.app_name }}${{ matrix.ext }}"
+          ASSET_NAME="${{ inputs.app_name }}-${{ matrix.platform }}${{ matrix.ext }}"
+          cp "dist/$DIST_NAME" "release_out/$ASSET_NAME"
+          echo "ASSET_NAME=$ASSET_NAME" >> "$GITHUB_ENV"
 
       - uses: actions/upload-artifact@v4
         with:
-          name: ${{ matrix.asset_name }}
-          path: release_out/${{ matrix.asset_name }}
+          name: ${{ env.ASSET_NAME }}
+          path: release_out/${{ env.ASSET_NAME }}
 
   release:
     needs: build

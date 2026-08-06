@@ -14,7 +14,7 @@ kvgrep is excluded (no code yet).
 | Repo | Theming | Auto-release-on-push | Update-check |
 |---|---|---|---|
 | KVGrainy | ✅ VisualAssault v0.2.0, pinned | ✅ | ✅ migrated to `kvg_updater` (pinned `@main`, no tag yet — see [PR #19](https://github.com/gerp93/KVGrainy/pull/19)) |
-| KVGroove | ✅ VisualAssault v0.2.0, pinned | ✅ | ❌ **gap** — add `kvg_updater` |
+| KVGroove | ✅ VisualAssault v0.2.0, pinned | ✅ | ✅ `kvg_updater` wired in (pinned `@main`, no tag yet — see [PR #5](https://github.com/gerp93/KVGroove/pull/5)) |
 | gameshell-deploy (Wails GUI) | ✅ VisualAssault, hand-transcribed, tokens current | ✅ | ❌ **gap** — add `kvgupdate` (new, unverified against a real build — see its README) |
 | Sweeper (Electron) | ⚠️ **stale vendor** — byte-copy of VisualAssault CSS missing `surface`/`border`/`textMuted`/`accentMuted` (pre-v0.2.0 snapshot, same drift class already fixed in gameshell-framework) | ✅ | ✅ already best-in-class (`electron-updater`, wired up) — reference implementation for future Electron apps |
 | KVG_Converter | ❌ **gap** — plain Tkinter GUI, no theming at all | ✅ | ❌ **gap** — add `kvg_updater` |
@@ -40,11 +40,11 @@ section is gone.
   once one exists.
 
 ### KVGroove
-- [ ] Add `kvg-updater` (pinned tag) to `requirements.txt`.
-- [ ] Add an `updater.py` wrapper following `kvg_updater`'s README example
-  (`GITHUB_REPO = "gerp93/KVGroove"`, `APP_NAME = "KVGroove"`).
-- [ ] Wire a "Check for Updates" entry point (menu item or startup check),
-  same UX shape as KVGrainy's.
+- [x] Added `kvg-updater` (`@main`, no tag yet), an `updater.py` wrapper,
+  and a "Check for Updates..." Help-menu entry + startup check — see
+  [PR #5](https://github.com/gerp93/KVGroove/pull/5). Also fixed a missing
+  `version_file: _version.py` on both release workflows in the same PR
+  (without it, `CURRENT_VERSION` could never resolve past `"0.0.0-dev"`).
 
 ### gameshell-deploy (Wails GUI)
 - [ ] Add `github.com/gerp93/KVG_Standards/packages/go/kvgupdate` (pinned

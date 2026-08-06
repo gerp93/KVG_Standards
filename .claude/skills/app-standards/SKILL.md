@@ -80,8 +80,13 @@ ships a binary end users run directly (not a web app, not a library, not a
 Stream Deck plugin — see below).
 
 - One implementation per stack, shared and pinned — never copy-pasted:
-  - PyInstaller (Python) apps: [`packages/python/kvg_updater`](https://github.com/gerp93/KVG_Standards/tree/main/packages/python/kvg_updater), pinned in `requirements.txt` to a tag (`@vX.Y.Z`, never `@main`).
+  - PyInstaller (Python) apps: [`packages/python/kvg_updater`](https://github.com/gerp93/KVG_Standards/tree/main/packages/python/kvg_updater), pinned in `requirements.txt` to a tag (`@vX.Y.Z`).
   - Wails/Go apps: [`packages/go/kvgupdate`](https://github.com/gerp93/KVG_Standards/tree/main/packages/go/kvgupdate), pinned in `go.mod` to a tag.
+  - **Current interim exception:** KVG_Standards has no tagged releases yet,
+    so every consumer above is currently pinned to `@main` instead (see
+    `update-check-versioning.md`'s documented exception) — don't flag this
+    as a violation right now. Once KVG_Standards cuts a first tag, pins
+    should move to it; flag a repo still on `@main` *after* that point.
   - Electron apps: `electron-updater` directly — this is already a real,
     maintained library, not something KVG_Standards needs to wrap. See
     Sweeper's `src/main/main.ts` for the reference wiring.

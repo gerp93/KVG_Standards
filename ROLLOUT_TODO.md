@@ -18,7 +18,7 @@ kvgrep is excluded (no code yet).
 | gameshell-deploy (Wails GUI) | ✅ VisualAssault, hand-transcribed, tokens current | ✅ | ❌ **gap** — add `kvgupdate` (new, unverified against a real build — see its README) |
 | Sweeper (Electron) | ⚠️ **stale vendor** — byte-copy of VisualAssault CSS missing `surface`/`border`/`textMuted`/`accentMuted` (pre-v0.2.0 snapshot, same drift class already fixed in gameshell-framework) | ✅ | ✅ already best-in-class (`electron-updater`, wired up) — reference implementation for future Electron apps |
 | KVG_Converter | ✅ VisualAssault v0.2.0, pinned — see [PR #5](https://github.com/gerp93/KVG_Converter/pull/5) | ✅ | ✅ `kvg_updater` wired in (pinned `@main`, no tag yet — see [PR #5](https://github.com/gerp93/KVG_Converter/pull/5)) |
-| KVGenius (Flet) | ⚠️ **broken** — imports `flet_kvg_themes` (an old, non-VisualAssault package) which isn't even in `requirements.txt`; theming silently no-ops to a hardcoded dark mode | ✅ | ⚠️ **design resolved, not yet wired in** — `kvg_updater` now has a bundle mode for Flet's directory-shaped build output; needs wiring into KVGenius and verification against a real `flet build`, see `packages/python/kvg_updater/README.md` |
+| KVGenius (Flet) | ✅ VisualAssault v0.2.0, pinned — see [PR #7](https://github.com/gerp93/KVGenius/pull/7) | ✅ | ✅ `kvg_updater` bundle mode wired in (pinned `@main`, no tag yet — see [PR #7](https://github.com/gerp93/KVGenius/pull/7)); **not yet verified against a real `flet build` output** |
 | KVGauge (Stream Deck plugin) | N/A? — needs a decision, see below | ✅ | **N/A by design** — Stream Deck plugins reinstall via `.streamDeckPlugin`/Marketplace, not self-update |
 | gameshell-framework (Go library) | ✅ fixed this session (vendored VisualAssault CSS, re-vendor script) — covers card-judge + timeline-trivia too | N/A by design (tag-only release for `go.mod` pinning) | N/A (server-side, no client to update) |
 | card-judge | ✅ (inherits from gameshell-framework) | N/A by design (deployed via gameshell-deploy/DO, not a release binary) | N/A |
@@ -77,18 +77,17 @@ section is gone.
   verify the theme picker and update flow manually before merging.
 
 ### KVGenius
-- [ ] Remove the `flet_kvg_themes` import path entirely — it's dead (not
-  installed, falls back silently).
-- [ ] Add VisualAssault's `packages/flet` (pinned tag) as the real theme
-  source instead.
-- [ ] Wire `kvg_updater`'s bundle mode in (`check_for_bundle_update` /
-  `download_and_extract_bundle` / `apply_bundle_update_and_restart`) — the
-  design gap is resolved, this is now an implementation task. Before
-  trusting it silently: confirm `Path(sys.executable).resolve().parent`
-  in a real `flet build` output actually points at the bundle root, and
-  that `_find_bundle_binary`'s per-platform lookup finds the right
-  executable for the Flet version in use. Test on at least one real build
-  before relying on it in production.
+- [x] Removed the dead `flet_kvg_themes` import, added VisualAssault's
+  `packages/flet` (pinned `@v0.2.0`), and wired `kvg_updater`'s bundle mode
+  in — see [PR #7](https://github.com/gerp93/KVGenius/pull/7). Also fixed
+  a real bug found along the way: `ft.ColorScheme(background=...)` isn't
+  valid on flet 0.86.x (filed upstream: [VisualAssault#8](https://github.com/gerp93/VisualAssault/pull/8)),
+  and added `release-flet.yml`'s missing `version_file` input (this repo).
+- [ ] **Still open**: verify the update-check against a real `flet build`
+  output. Confirm `Path(sys.executable).resolve().parent` actually points
+  at the bundle root, and that `_find_bundle_binary`'s per-platform lookup
+  finds the right executable for the Flet version in use, before relying
+  on this in production.
 
 ### KVGauge (Stream Deck plugin)
 - [ ] **Needs a decision, not just an implementation** on theming: does a

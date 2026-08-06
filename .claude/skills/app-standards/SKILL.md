@@ -11,6 +11,30 @@ repo's current `README.md` / `themes-versioning.md` /
 `update-check-versioning.md` / `licensing.md` / `.github/workflows/` over
 anything cached here.
 
+## New tech stacks
+
+Theming, release/CI, update-check, and licensing each cover a fixed list of
+stacks today (Tkinter/Flet/Electron/Wails/CSS/Angular, PyInstaller/Wails/
+Electron/Flet, etc.). If a new app needs a stack that isn't in one of these
+checklists, **that's not something to solve locally in the app repo**:
+
+1. Design the standard for that stack, following the shape of the existing
+   pattern for its category (e.g. a new `packages/<lang>/<name>` for
+   update-check, a new `release-*.yml` for release/CI, a new theming
+   package alongside VisualAssault's existing ones).
+2. **Ask the human to approve the design before implementing it.** This is
+   a shared-API decision — every future repo on that stack inherits
+   whatever gets decided here.
+3. Once approved, add it to `gerp93/KVG_Standards` itself (the package/
+   workflow/template, plus a doc like `themes-versioning.md`/
+   `update-check-versioning.md`/`licensing.md`), and update this skill so
+   future audits and new repos pick it up automatically.
+4. Only then wire it into the app repo that needed it.
+
+A one-off implementation living only in the consumer app repo is exactly
+the drift this whole standard exists to prevent — don't let "we'll
+generalize it later" become permanent.
+
 ## Licensing
 
 - Default license is **AGPL-3.0** for every active repo — copy an existing
@@ -54,7 +78,7 @@ First classify the repo — the shape of "release" differs by category:
 | Go library | `go.mod` at root, no `main` package meant to run standalone, other repos import it | `templates/cut-tag.yml` only — bare semver tag, no build |
 | Go web app | Has a `Dockerfile`, deployed via [gameshell-deploy](https://github.com/gerp93/gameshell-deploy) / DigitalOcean App Platform | `templates/ci.yml` (build+vet) only. **No** GitHub-Release-binary workflow — deploy happens on push via DO's own GitHub integration, not a release artifact. If one exists, it's vestigial; remove it. |
 | Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-streamdeck.yml` for a Stream Deck plugin) |
-| Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. Flag it for a human decision instead of guessing. |
+| Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. This is the "New tech stacks" case above — ask the human before designing a new pattern. |
 
 Desktop GUI apps/plugins get **both** release triggers, not one or the
 other: `auto-release.yml` ships a release on every commit to `main` by

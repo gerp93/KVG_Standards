@@ -4,6 +4,10 @@ Source of truth for how gerp93 app repos build, release, and theme
 themselves — so that "the standard" lives in one place and repos pull from
 it, instead of each repo growing its own copy that quietly drifts.
 
+See **[`ROLLOUT_TODO.md`](ROLLOUT_TODO.md)** for the current gap matrix and
+per-repo checklist of what's not yet aligned (theming, auto-release,
+update-check).
+
 ## What lives here
 
 - **`.github/workflows/`** — reusable (`workflow_call`) build+release

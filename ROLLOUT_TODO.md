@@ -13,7 +13,7 @@ kvgrep is excluded (no code yet).
 
 | Repo | Theming | Auto-release-on-push | Update-check |
 |---|---|---|---|
-| KVGrainy | ✅ VisualAssault v0.2.0, pinned | ✅ | ⚠️ has its own bespoke `updater.py` — should migrate to `kvg_updater` (it's literally the extraction source, so this is a near-zero-risk swap) |
+| KVGrainy | ✅ VisualAssault v0.2.0, pinned | ✅ | ✅ migrated to `kvg_updater` (pinned `@main`, no tag yet — see [PR #19](https://github.com/gerp93/KVGrainy/pull/19)) |
 | KVGroove | ✅ VisualAssault v0.2.0, pinned | ✅ | ❌ **gap** — add `kvg_updater` |
 | gameshell-deploy (Wails GUI) | ✅ VisualAssault, hand-transcribed, tokens current | ✅ | ❌ **gap** — add `kvgupdate` (new, unverified against a real build — see its README) |
 | Sweeper (Electron) | ⚠️ **stale vendor** — byte-copy of VisualAssault CSS missing `surface`/`border`/`textMuted`/`accentMuted` (pre-v0.2.0 snapshot, same drift class already fixed in gameshell-framework) | ✅ | ✅ already best-in-class (`electron-updater`, wired up) — reference implementation for future Electron apps |
@@ -33,10 +33,11 @@ section is gone.
 ## Action items by repo
 
 ### KVGrainy
-- [ ] Migrate `updater.py` to import from `kvg_updater` (pinned tag) instead
-  of carrying its own copy of the logic — it's the extraction source, so
-  the wrapper should end up nearly identical to `kvg_updater`'s README
-  example. Low risk: this is a refactor, not new behavior.
+- [x] Migrate `updater.py` to a thin wrapper around `kvg_updater` — see
+  [PR #19](https://github.com/gerp93/KVGrainy/pull/19). Pinned `@main`
+  (KVG_Standards has no tagged releases yet, see
+  `update-check-versioning.md`'s interim-exception note); switch to a tag
+  once one exists.
 
 ### KVGroove
 - [ ] Add `kvg-updater` (pinned tag) to `requirements.txt`.

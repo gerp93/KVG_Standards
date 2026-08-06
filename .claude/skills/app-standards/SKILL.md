@@ -1,14 +1,15 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag) and release/CI pipelines (KVG_Standards reusable workflows). Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), and self-update (kvg_updater/kvgupdate, pinned by tag). Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
 
 Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards).
 This skill is a checklist, not a copy of the standard — always defer to that
-repo's current `README.md` / `themes-versioning.md` / `.github/workflows/`
-over anything cached here.
+repo's current `README.md` / `themes-versioning.md` /
+`update-check-versioning.md` / `.github/workflows/` over anything cached
+here.
 
 ## Theming
 
@@ -54,12 +55,42 @@ chosen version number when you want one instead of the auto-bump.
   `version_bump.sh`) — that's exactly the drift this repo exists to stop;
   it belongs in `KVG_Standards` instead.
 
+## Update-check
+
+Applies to any repo in the "Desktop GUI app / plugin" category above that
+ships a binary end users run directly (not a web app, not a library, not a
+Stream Deck plugin — see below).
+
+- One implementation per stack, shared and pinned — never copy-pasted:
+  - PyInstaller (Python) apps: [`packages/python/kvg_updater`](https://github.com/gerp93/KVG_Standards/tree/main/packages/python/kvg_updater), pinned in `requirements.txt` to a tag (`@vX.Y.Z`, never `@main`).
+  - Wails/Go apps: [`packages/go/kvgupdate`](https://github.com/gerp93/KVG_Standards/tree/main/packages/go/kvgupdate), pinned in `go.mod` to a tag.
+  - Electron apps: `electron-updater` directly — this is already a real,
+    maintained library, not something KVG_Standards needs to wrap. See
+    Sweeper's `src/main/main.ts` for the reference wiring.
+  - Flet apps: **no package exists yet** — `kvg_updater` assumes a
+    PyInstaller `--onefile` binary layout, unconfirmed for `flet build`
+    output. Don't force-fit it; flag for a design decision instead of
+    guessing (this is currently blocking KVGenius, see `ROLLOUT_TODO.md`).
+- **Violation to flag:** a hand-rolled update-check/self-replace
+  implementation instead of the shared package for that stack — this is
+  exactly the kind of logic (GitHub Releases API polling, platform-specific
+  replace-while-running) that's easy to get subtly wrong three different
+  ways across three repos.
+- **Violation to flag:** a desktop GUI app/plugin with a release pipeline
+  but no update-check at all — not necessarily wrong (KVGauge's Stream Deck
+  plugin is a deliberate exception, see below), but worth surfacing as a
+  gap rather than silently skipping it.
+- **KVGauge (Stream Deck plugin) is a deliberate exception**, not a gap:
+  Stream Deck plugins are normally reinstalled via a new `.streamDeckPlugin`
+  file or the Elgato Marketplace, not self-updated. Don't add update-check
+  here without a specific reason to override that.
+
 ## Audit workflow
 
 When asked to check a repo against these standards:
 1. Identify its category from the table above.
-2. Check theming (if it has a UI) and release/CI pipeline against the
-   checklists.
+2. Check theming (if it has a UI), release/CI pipeline, and update-check
+   (if it ships a binary end users run directly) against the checklists.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo

@@ -13,76 +13,87 @@ kvgrep is excluded (no code yet).
 
 | Repo | Theming | Auto-release-on-push | Update-check |
 |---|---|---|---|
-| KVGrainy | ✅ VisualAssault v0.2.0, pinned | ✅ | ✅ (`updater.py`, GitHub Releases API + self-replace) |
-| KVGroove | ✅ VisualAssault v0.2.0, pinned | ✅ | ❌ **gap** |
-| gameshell-deploy (Wails GUI) | ✅ VisualAssault, hand-transcribed, tokens current | ✅ | ❌ **gap** |
-| Sweeper (Electron) | ⚠️ **stale vendor** — byte-copy of VisualAssault CSS missing `surface`/`border`/`textMuted`/`accentMuted` (pre-v0.2.0 snapshot, same drift class already fixed in gameshell-framework) | ✅ | ✅ already best-in-class (`electron-updater`, wired up) |
-| KVG_Converter | ❌ **gap** — plain Tkinter GUI, no theming at all | ✅ | ❌ **gap** |
-| KVGenius (Flet) | ⚠️ **broken** — imports `flet_kvg_themes` (an old, non-VisualAssault package) which isn't even in `requirements.txt`; theming silently no-ops to a hardcoded dark mode | ✅ | ❌ **gap** |
-| KVGauge (Stream Deck plugin) | N/A? — needs a decision, see below | ✅ | N/A? — needs a decision, see below |
+| KVGrainy | ✅ VisualAssault v0.2.0, pinned | ✅ | ⚠️ has its own bespoke `updater.py` — should migrate to `kvg_updater` (it's literally the extraction source, so this is a near-zero-risk swap) |
+| KVGroove | ✅ VisualAssault v0.2.0, pinned | ✅ | ❌ **gap** — add `kvg_updater` |
+| gameshell-deploy (Wails GUI) | ✅ VisualAssault, hand-transcribed, tokens current | ✅ | ❌ **gap** — add `kvgupdate` (new, unverified against a real build — see its README) |
+| Sweeper (Electron) | ⚠️ **stale vendor** — byte-copy of VisualAssault CSS missing `surface`/`border`/`textMuted`/`accentMuted` (pre-v0.2.0 snapshot, same drift class already fixed in gameshell-framework) | ✅ | ✅ already best-in-class (`electron-updater`, wired up) — reference implementation for future Electron apps |
+| KVG_Converter | ❌ **gap** — plain Tkinter GUI, no theming at all | ✅ | ❌ **gap** — add `kvg_updater` |
+| KVGenius (Flet) | ⚠️ **broken** — imports `flet_kvg_themes` (an old, non-VisualAssault package) which isn't even in `requirements.txt`; theming silently no-ops to a hardcoded dark mode | ✅ | ❌ **blocked** — `kvg_updater` assumes PyInstaller's binary layout, unconfirmed for `flet build` output; needs verification before wiring in, see `packages/python/kvg_updater/README.md` |
+| KVGauge (Stream Deck plugin) | N/A? — needs a decision, see below | ✅ | **N/A by design** — Stream Deck plugins reinstall via `.streamDeckPlugin`/Marketplace, not self-update |
 | gameshell-framework (Go library) | ✅ fixed this session (vendored VisualAssault CSS, re-vendor script) — covers card-judge + timeline-trivia too | N/A by design (tag-only release for `go.mod` pinning) | N/A (server-side, no client to update) |
 | card-judge | ✅ (inherits from gameshell-framework) | N/A by design (deployed via gameshell-deploy/DO, not a release binary) | N/A |
 | timeline-trivia | ✅ (inherits from gameshell-framework) | N/A by design | N/A |
 
+**Update-check standard now exists** — [`packages/python/kvg_updater`](packages/python/kvg_updater)
+and [`packages/go/kvgupdate`](packages/go/kvgupdate), documented in
+`update-check-versioning.md` and enforced via the `app-standards` skill.
+The rest of this doc's per-repo items reflect that; the old "needs design"
+section is gone.
+
 ## Action items by repo
 
+### KVGrainy
+- [ ] Migrate `updater.py` to import from `kvg_updater` (pinned tag) instead
+  of carrying its own copy of the logic — it's the extraction source, so
+  the wrapper should end up nearly identical to `kvg_updater`'s README
+  example. Low risk: this is a refactor, not new behavior.
+
+### KVGroove
+- [ ] Add `kvg-updater` (pinned tag) to `requirements.txt`.
+- [ ] Add an `updater.py` wrapper following `kvg_updater`'s README example
+  (`GITHUB_REPO = "gerp93/KVGroove"`, `APP_NAME = "KVGroove"`).
+- [ ] Wire a "Check for Updates" entry point (menu item or startup check),
+  same UX shape as KVGrainy's.
+
+### gameshell-deploy (Wails GUI)
+- [ ] Add `github.com/gerp93/KVG_Standards/packages/go/kvgupdate` (pinned
+  tag) to `gui/go.mod`.
+- [ ] Wire `kvgupdate.CheckForUpdate` / `DownloadAndExtract` /
+  `ApplyUpdateAndRestart` into the app (see that package's README).
+- [ ] **Before relying on this**: verify it against a real tagged release —
+  the package's extract/replace path has not been run end-to-end yet. Test
+  on all three OSes if possible, Windows especially (the self-delete-batch
+  trick is the fiddliest part).
+- [ ] Optional polish: add a version-pin comment + re-vendor script for
+  `gui/frontend/src/themes.css`, matching the gameshell-framework/Sweeper
+  convention, even though it isn't currently stale.
+
 ### Sweeper
-- [ ] Re-vendor `src/renderer/themes.css` from VisualAssault `packages/css/themes.css` @ `v0.2.0` (same fix already applied to gameshell-framework's `colors.css`). Simpler here than gameshell-framework's case: no "Classic" section to preserve — the whole file is VisualAssault content, so this can be a straight overwrite.
-- [ ] Add a header comment noting the source tag, same convention as gameshell-framework's vendored section.
-- [ ] Decide: copy `gameshell-framework/scripts/update-visual-assault-css.sh`'s approach (a repo-local re-vendor script), or centralize a version of that script in `KVG_Standards/scripts/` that any CSS-vendoring consumer can call with its own file path. **Open question, see "Open questions" below.**
+- [ ] Re-vendor `src/renderer/themes.css` from VisualAssault
+  `packages/css/themes.css` @ `v0.2.0` (same fix already applied to
+  gameshell-framework's `colors.css`). Simpler here than
+  gameshell-framework's case: no "Classic" section to preserve — the whole
+  file is VisualAssault content, so this can be a straight overwrite.
+- [ ] Add a header comment noting the source tag.
+- [ ] Update-check: nothing to do, already best-in-class.
 
 ### KVG_Converter
 - [ ] Add `visual-assault-tkinter` (pinned tag) to `requirements.txt`.
-- [ ] Add a theme picker to `ConverterGUI` (`rtf_to_pdf_converter.py`), following KVGrainy's `theming.py` pattern (`apply_theme`, `capture_defaults` for "System Default").
-- [ ] Add an update-checker (see "Update-check standard" below) — this is a PyInstaller app just like KVGrainy, so the same mechanism applies directly.
+- [ ] Add a theme picker to `ConverterGUI` (`rtf_to_pdf_converter.py`),
+  following KVGrainy's `theming.py` pattern (`apply_theme`,
+  `capture_defaults` for "System Default").
+- [ ] Add `kvg-updater` (pinned tag) + an `updater.py` wrapper, same as
+  KVGroove above.
 
 ### KVGenius
-- [ ] Remove the `flet_kvg_themes` import path entirely — it's dead (not installed, falls back silently).
-- [ ] Add VisualAssault's `packages/flet` (pinned tag) as the real theme source instead.
-- [ ] Add an update-checker — Flet apps package via `flet build`, not PyInstaller, so confirm whether KVGrainy's `updater.py` approach (which assumes a PyInstaller-built binary path) needs adaptation for a `flet build` output layout before reusing it.
-
-### KVGroove
-- [ ] Add an update-checker — same shape as KVGrainy's `updater.py` (PyInstaller-built, so directly reusable/adaptable).
-
-### gameshell-deploy (Wails GUI)
-- [ ] Add an update-checker. No existing pattern for Go/Wails apps yet — needs a new design (see "Update-check standard" below), not just a port of KVGrainy's Python approach.
-- [ ] Optional polish: add a version-pin comment + re-vendor script for `gui/frontend/src/themes.css`, matching the gameshell-framework/Sweeper convention, even though it isn't currently stale.
+- [ ] Remove the `flet_kvg_themes` import path entirely — it's dead (not
+  installed, falls back silently).
+- [ ] Add VisualAssault's `packages/flet` (pinned tag) as the real theme
+  source instead.
+- [ ] Update-check is **blocked**, not just pending: confirm whether
+  `sys.executable` in a `flet build` output resolves to something
+  `kvg_updater`'s replace-while-running logic can actually work with,
+  before wiring it in. If it doesn't, that's a `kvg_updater` design gap to
+  fix (a `flet`-aware binary-path resolution), not a KVGenius-specific
+  workaround.
 
 ### KVGauge (Stream Deck plugin)
-- [ ] **Needs a decision, not just an implementation**: does a Stream Deck plugin's property inspector (`propertyinspector.html`) even want a VisualAssault theme, given Stream Deck has its own UI chrome/conventions? And does "update-check" make sense here at all — Stream Deck plugins are normally reinstalled via a new `.streamDeckPlugin` file or the Elgato Marketplace, not self-updating. Recommend treating both as **out of scope** unless there's a specific reason to want them.
-
-## Update-check standard (doesn't fully exist yet — needs design)
-
-KVGrainy's `updater.py` is the only real example today: compares a build-time
-`_version.py` (written by CI, gitignored) against the latest GitHub Release
-via the API, downloads the matching asset, and self-replaces (with
-Windows/macOS/Linux-specific replace logic — see KVGrainy's `CLAUDE.md` for
-the OS-specific gotchas, especially the `os._exit()` requirement on Windows).
-
-This needs to become a real shared component before rolling it out to
-KVGroove/KVG_Converter/KVGenius/gameshell-deploy, the same way VisualAssault
-is the shared theme component — otherwise every repo will copy-paste
-`updater.py` and drift, which is exactly the problem this whole standards
-effort exists to prevent.
-
-**Open questions to resolve before implementing broadly:**
-1. **Python (PyInstaller) apps** — KVGrainy, KVGroove, KVG_Converter: should
-   `updater.py` become a small pip-installable shared package (own repo or a
-   `packages/` subdir here, consumed the same way VisualAssault is — git
-   dependency pinned to a tag), rather than copy-pasted three times?
-2. **Flet apps** — KVGenius: `flet build` output layout differs from a
-   PyInstaller `--onefile` binary. Does the same self-replace strategy even
-   work, or does Flet need a different update mechanism?
-3. **Go/Wails apps** — gameshell-deploy: no prior art at all. Likely shape:
-   check GitHub Releases API from Go, prompt the user, download + replace —
-   but Wails apps run as native binaries per-OS same as the PyInstaller
-   case, so the replace-while-running logic (Windows self-delete batch
-   script trick, macOS/Linux `execv`) may be portable in spirit even though
-   the implementation language differs. Worth a design pass, not a blind
-   port.
-4. Electron apps are **already solved** — `electron-updater` is the
-   industry-standard answer there. Nothing to build, just confirm any future
-   Electron app wires it up like Sweeper did.
+- [ ] **Needs a decision, not just an implementation** on theming: does a
+  Stream Deck plugin's property inspector (`propertyinspector.html`) even
+  want a VisualAssault theme, given Stream Deck has its own UI
+  chrome/conventions? Update-check is already resolved as N/A (see gap
+  matrix) — recommend treating theming the same way (out of scope) unless
+  there's a specific reason to want it.
 
 ## Open questions (theming)
 
@@ -90,4 +101,4 @@ effort exists to prevent.
    move into `KVG_Standards` as a shared, parameterized script (taking a
    target file path as an argument) instead of living per-repo? Sweeper and
    gameshell-deploy's `gui/frontend` would both want it too.
-2. KVGauge theming/update-check scope decision (see above).
+2. KVGauge theming scope decision (see above).

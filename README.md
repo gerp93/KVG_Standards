@@ -28,6 +28,16 @@ Theme source of truth is [VisualAssault](https://github.com/gerp93/VisualAssault
 `themes/THEMES.md`). Consumers must pin to a released tag
 (`@vX.Y.Z`), never `@main` — see `themes-versioning.md`.
 
+## Update-check
+
+Self-update (check GitHub Releases, download, replace the running binary)
+is a shared component too, not something each app reinvents:
+[`packages/python/kvg_updater`](packages/python/kvg_updater) (PyInstaller
+apps) and [`packages/go/kvgupdate`](packages/go/kvgupdate) (Wails/Go apps).
+Electron apps use `electron-updater` directly (see Sweeper's
+`src/main/main.ts`) — no KVG_Standards package needed there. Consumers pin
+to a released tag, never `@main` — see `update-check-versioning.md`.
+
 ## Release workflow catalog
 
 | Workflow | For | Used by |

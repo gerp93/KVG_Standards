@@ -69,6 +69,54 @@ generalize it later" become permanent.
   acceptable for prototypes but should not be treated as a real dependency
   in anything that gets a release pipeline.
 
+## Logo & branding
+
+Every new app repo gets a logo checked in and wired into every surface a
+user can see it, not just dropped into the README and forgotten.
+
+- Source mark lives at `assets/logo.png` — a square (or squarable), high-res
+  master. Everything else is generated from it by a one-off
+  `scripts/generate-icons.*` script (Node+`sharp` for Electron repos,
+  Python+Pillow for PyInstaller repos) — never hand-export each size
+  separately, that's exactly the kind of copy drift this repo exists to
+  prevent. See Sweeper's `scripts/generate-icons.js` (Electron/sharp
+  reference) and KVGrainy's `scripts/generate_icons.py` (PyInstaller/Pillow
+  reference) for the pattern: pad to square, then emit each size/format
+  below from that one padded source.
+- **Placement checklist — every surface below should exist, not just
+  whichever one is easiest:**
+  - **README** — logo image near the top of the file (`assets/logo.png` or
+    a purpose-made hero crop), before the H1 title.
+  - **In-app window/taskbar icon** — set at runtime so it shows while the
+    app is running, independent of the packaged binary's own icon:
+    Electron `BrowserWindow({ icon: ... })`, Tkinter
+    `root.iconphoto(True, ...)`, Flet `page.window.icon`, Wails
+    `options.App{ Icon: ... }`. Sweeper's `src/main/main.ts` and KVGrainy's
+    `gui.py` (`setup_icon`) are the reference implementations for
+    Electron/Tkinter respectively.
+  - **In-app usage** — the logo shown somewhere in the app's own UI, next to
+    the app name (Sweeper's sidebar, KVGrainy's header row next to the
+    title/subtitle). Skip only if the app genuinely has no chrome to put it
+    in.
+  - **Packaged binary/installer icon** — the icon Explorer/Finder/the
+    taskbar shows for the built artifact itself, before the app even
+    launches: electron-builder's `build.icon` (from `build/icon.png`,
+    auto-converted per platform), PyInstaller's `--icon` flag (`.ico` on
+    Windows, `.icns` on macOS, unsupported on Linux — KVG_Standards'
+    `release-python-gui.yml` takes this as the `icon_path` input), Wails'
+    `wails.json` icon config.
+  - **GitHub repo social preview** (optional, manual) — Settings → General
+    → Social preview. Not scriptable via git; a human uploads it once. Skip
+    for repos with no public-facing purpose.
+- **Violation to flag:** a desktop GUI app/plugin repo with no
+  `assets/logo.png` (or equivalent) at all.
+- **Violation to flag:** a logo present in only one surface (e.g. README
+  image but nothing wired into the app itself or the packaged binary) —
+  that's an incomplete rollout, not a stylistic choice.
+- **Violation to flag:** icon files hand-exported/hand-copied per size
+  instead of generated from the one source mark by a checked-in script —
+  same drift risk as a hand-rolled theme palette.
+
 ## Release / CI pipeline
 
 First classify the repo — the shape of "release" differs by category:

@@ -28,6 +28,11 @@ real, maintained answer — nothing to build, see Sweeper's
 
 **Consumers pin to a tag, never `@main`/a pseudo-version.**
 
+**Current exception:** KVG_Standards itself has no tagged releases yet —
+per-repo decision, consumers pin `kvg-updater`/`kvgupdate` to `@main` until
+a first tag exists. Once KVG_Standards cuts one, switch pins to it; don't
+treat `@main` as permanent.
+
 ```
 # Python — requirements.txt, wrong:
 kvg-updater @ git+https://github.com/gerp93/KVG_Standards.git@main#subdirectory=packages/python/kvg_updater

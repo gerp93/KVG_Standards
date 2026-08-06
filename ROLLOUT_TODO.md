@@ -2,8 +2,9 @@
 
 Tracks bringing every in-scope app repo into full alignment on four
 things: **theming**, **auto-release-on-push**, **update-check**, and
-**licensing**. This is a living checklist — update it as items land, don't
-let it go stale.
+**licensing** — plus **SQLite database location** where a repo stores its
+own data in SQLite (KVGenius, Sweeper). This is a living checklist —
+update it as items land, don't let it go stale.
 
 Scope: the 10 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
@@ -66,7 +67,8 @@ section is gone.
   `gui/frontend/src/themes.css`, matching the gameshell-framework/Sweeper
   convention, even though it isn't currently stale.
 - [ ] Add `LICENSE` (AGPL-3.0) — no license file exists. Deps (Wails, Go
-  modules, npm frontend deps) checked, all MIT/BSD, no blocker.
+  modules, npm frontend deps) checked, all MIT/BSD, no blocker. PR open:
+  [gameshell-deploy #12](https://github.com/gerp93/gameshell-deploy/pull/12).
 
 ### Sweeper
 - [ ] Re-vendor `src/renderer/themes.css` from VisualAssault
@@ -76,8 +78,10 @@ section is gone.
   file is VisualAssault content, so this can be a straight overwrite.
 - [ ] Add a header comment noting the source tag.
 - [ ] Update-check: nothing to do, already best-in-class.
-- [ ] Add `LICENSE` (AGPL-3.0) — no license file exists. Deps (Electron,
-  React, sql.js, etc.) checked, all MIT, no blocker.
+- [x] Added `LICENSE` (AGPL-3.0) — see [PR #17](https://github.com/gerp93/Sweeper/pull/17), merged.
+- [x] Already has a working SQLite relocate feature (`src/main/dbLocation.ts`)
+  — this became the reference pattern written up in
+  `db-location-versioning.md`. Nothing to do here.
 
 ### KVG_Converter
 - [x] Added `visual-assault-tkinter` + a theme picker (`theming.py`,
@@ -99,9 +103,14 @@ section is gone.
   at the bundle root, and that `_find_bundle_binary`'s per-platform lookup
   finds the right executable for the Flet version in use, before relying
   on this in production.
-- [ ] Add `LICENSE` (AGPL-3.0) — no license file exists. ML deps checked
-  (torch, transformers, diffusers, accelerate, safetensors, peft are
-  BSD/Apache-2.0; bitsandbytes/flask MIT/BSD; flet Apache-2.0), no blocker.
+- [x] Added `LICENSE` (AGPL-3.0) — see [PR #8](https://github.com/gerp93/KVGenius/pull/8), merged.
+- [ ] Wire `kvg_dblocation` into `src/database/chat_history.py`, which
+  currently hardcodes `db_path: str = "./chat_history.db"` — a relative
+  path with no way for the user to relocate it. Reuse `core.CACHE_DIR`'s
+  parent as the data directory (don't invent a second convention). Add a
+  Database Location section to the Settings tab (existing-file picker,
+  new-location picker, reset-to-default), same shape as Sweeper's. See
+  `db-location-versioning.md`.
 
 ### KVGauge (Stream Deck plugin)
 - [ ] **Needs a decision, not just an implementation** on theming: does a

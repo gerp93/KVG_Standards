@@ -45,6 +45,14 @@ Electron apps use `electron-updater` directly (see Sweeper's
 `src/main/main.ts`) — no KVG_Standards package needed there. Consumers pin
 to a released tag, never `@main` — see `update-check-versioning.md`.
 
+## SQLite database location
+
+Any app storing its own data in SQLite should let the user relocate that
+file (for backup/syncing), not hardcode a fixed path:
+[`packages/python/kvg_dblocation`](packages/python/kvg_dblocation) for
+Python apps. Electron apps follow Sweeper's `src/main/dbLocation.ts`
+directly as the reference pattern — see `db-location-versioning.md`.
+
 ## Release workflow catalog
 
 | Workflow | For | Used by |

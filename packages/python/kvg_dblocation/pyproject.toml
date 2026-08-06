@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kvg-dblocation"
+version = "0.1.0"
+description = "User-configurable SQLite file location for Python desktop apps, with copy-on-relocate"
+requires-python = ">=3.9"
+
+[tool.setuptools.packages.find]
+include = ["kvg_dblocation*"]

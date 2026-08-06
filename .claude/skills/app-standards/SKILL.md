@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), and licensing (AGPL-3.0 by default). Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), and SQLite database location (kvg_dblocation, pinned by tag). Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -8,8 +8,8 @@ description: gerp93 app-repo conventions — theming (VisualAssault, pinned by t
 Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards).
 This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
-`update-check-versioning.md` / `licensing.md` / `.github/workflows/` over
-anything cached here.
+`update-check-versioning.md` / `licensing.md` / `db-location-versioning.md`
+/ `.github/workflows/` over anything cached here.
 
 ## New tech stacks
 
@@ -137,13 +137,36 @@ Stream Deck plugin — see below).
   file or the Elgato Marketplace, not self-updated. Don't add update-check
   here without a specific reason to override that.
 
+## SQLite database location
+
+Applies to any app that stores its own data in a local SQLite file (not a
+server-side database like MariaDB — card-judge/timeline-trivia don't need
+this).
+
+- Don't hardcode a fixed relative/absolute path for the database file. The
+  user should be able to relocate it — e.g. into a cloud-synced folder —
+  for backup/syncing, without losing data.
+- One implementation per stack, shared and pinned:
+  - Python apps: [`packages/python/kvg_dblocation`](https://github.com/gerp93/KVG_Standards/tree/main/packages/python/kvg_dblocation), pinned in `requirements.txt` to a tag (currently `@main`, see the interim exception in `db-location-versioning.md`).
+  - Electron apps: follow Sweeper's `src/main/dbLocation.ts` as the
+    reference pattern directly — same default/effective/set/reset shape,
+    same copy-on-relocate behavior, parameterized for the new app's name.
+- A Settings UI should expose: the current path, "choose an existing
+  file" (adopt as-is), "choose a new location" (copies the current
+  database there), and "reset to default" — then restart the app, since
+  an already-open database connection can't be pointed at a new path.
+- **Violation to flag:** a SQLite-backed app with a hardcoded db path and
+  no way for the user to relocate it (e.g. KVGenius's
+  `chat_history.py: db_path: str = "./chat_history.db"` before this was
+  fixed).
+
 ## Audit workflow
 
 When asked to check a repo against these standards:
 1. Identify its category from the table above.
 2. Check theming (if it has a UI), release/CI pipeline, update-check
-   (if it ships a binary end users run directly), and licensing against
-   the checklists.
+   (if it ships a binary end users run directly), licensing, and database
+   location (if it stores data in SQLite) against the checklists.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo

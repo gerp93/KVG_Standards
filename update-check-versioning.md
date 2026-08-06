@@ -11,12 +11,18 @@ running binary) is a shared component, same principle as theming:
 | [`packages/python/kvg_updater`](packages/python/kvg_updater) | PyInstaller-built Python GUI apps | Extracted from KVGrainy's working `updater.py` — battle-tested logic, just parameterized |
 | [`packages/go/kvgupdate`](packages/go/kvgupdate) | Wails (Go) desktop apps | New — check/download logic is low-risk, but the extract-and-replace path hasn't been run against a real build yet |
 
-Flet apps (KVGenius) and Electron apps don't have a package here yet:
-Flet's `flet build` output layout hasn't been confirmed compatible with
-`kvg_updater`'s PyInstaller assumptions (see that package's README);
-Electron already has a real, maintained answer in `electron-updater` —
-nothing to build, see Sweeper's `src/main/main.ts` for the reference
-wiring (`setupAutoUpdater`/`checkForUpdatesNow`).
+`kvg_updater` now also ships a **bundle mode** (`check_for_bundle_update` /
+`download_and_extract_bundle` / `apply_bundle_update_and_restart`) for Flet
+apps (KVGenius), whose `flet build` output is a directory rather than a
+single PyInstaller-style executable. The archive-extraction and
+directory-swap plumbing is smoke-tested; it has not yet been run against a
+real `flet build` output — see that package's README before wiring it into
+KVGenius silently.
+
+Electron apps don't have a package here: `electron-updater` is already a
+real, maintained answer — nothing to build, see Sweeper's
+`src/main/main.ts` for the reference wiring
+(`setupAutoUpdater`/`checkForUpdatesNow`).
 
 ## The rule
 

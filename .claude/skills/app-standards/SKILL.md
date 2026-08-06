@@ -67,10 +67,15 @@ Stream Deck plugin — see below).
   - Electron apps: `electron-updater` directly — this is already a real,
     maintained library, not something KVG_Standards needs to wrap. See
     Sweeper's `src/main/main.ts` for the reference wiring.
-  - Flet apps: **no package exists yet** — `kvg_updater` assumes a
-    PyInstaller `--onefile` binary layout, unconfirmed for `flet build`
-    output. Don't force-fit it; flag for a design decision instead of
-    guessing (this is currently blocking KVGenius, see `ROLLOUT_TODO.md`).
+  - Flet apps: `kvg_updater`'s **bundle mode**
+    (`check_for_bundle_update`/`download_and_extract_bundle`/
+    `apply_bundle_update_and_restart`), pinned the same way as its
+    single-file mode. Swaps the whole build directory instead of one
+    binary, matching `release-flet.yml`'s archive shape. The extraction
+    and directory-swap logic is smoke-tested but not yet run against a
+    real `flet build` output — verify `_find_bundle_binary`'s layout
+    assumptions before trusting it silently in a given app (see the
+    package's README).
 - **Violation to flag:** a hand-rolled update-check/self-replace
   implementation instead of the shared package for that stack — this is
   exactly the kind of logic (GitHub Releases API polling, platform-specific

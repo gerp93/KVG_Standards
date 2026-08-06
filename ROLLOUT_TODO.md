@@ -17,7 +17,7 @@ kvgrep is excluded (no code yet).
 | KVGroove | ✅ VisualAssault v0.2.0, pinned | ✅ | ✅ `kvg_updater` wired in (pinned `@main`, no tag yet — see [PR #5](https://github.com/gerp93/KVGroove/pull/5)) |
 | gameshell-deploy (Wails GUI) | ✅ VisualAssault, hand-transcribed, tokens current | ✅ | ❌ **gap** — add `kvgupdate` (new, unverified against a real build — see its README) |
 | Sweeper (Electron) | ⚠️ **stale vendor** — byte-copy of VisualAssault CSS missing `surface`/`border`/`textMuted`/`accentMuted` (pre-v0.2.0 snapshot, same drift class already fixed in gameshell-framework) | ✅ | ✅ already best-in-class (`electron-updater`, wired up) — reference implementation for future Electron apps |
-| KVG_Converter | ❌ **gap** — plain Tkinter GUI, no theming at all | ✅ | ❌ **gap** — add `kvg_updater` |
+| KVG_Converter | ✅ VisualAssault v0.2.0, pinned — see [PR #5](https://github.com/gerp93/KVG_Converter/pull/5) | ✅ | ✅ `kvg_updater` wired in (pinned `@main`, no tag yet — see [PR #5](https://github.com/gerp93/KVG_Converter/pull/5)) |
 | KVGenius (Flet) | ⚠️ **broken** — imports `flet_kvg_themes` (an old, non-VisualAssault package) which isn't even in `requirements.txt`; theming silently no-ops to a hardcoded dark mode | ✅ | ⚠️ **design resolved, not yet wired in** — `kvg_updater` now has a bundle mode for Flet's directory-shaped build output; needs wiring into KVGenius and verification against a real `flet build`, see `packages/python/kvg_updater/README.md` |
 | KVGauge (Stream Deck plugin) | N/A? — needs a decision, see below | ✅ | **N/A by design** — Stream Deck plugins reinstall via `.streamDeckPlugin`/Marketplace, not self-update |
 | gameshell-framework (Go library) | ✅ fixed this session (vendored VisualAssault CSS, re-vendor script) — covers card-judge + timeline-trivia too | N/A by design (tag-only release for `go.mod` pinning) | N/A (server-side, no client to update) |
@@ -69,12 +69,12 @@ section is gone.
 - [ ] Update-check: nothing to do, already best-in-class.
 
 ### KVG_Converter
-- [ ] Add `visual-assault-tkinter` (pinned tag) to `requirements.txt`.
-- [ ] Add a theme picker to `ConverterGUI` (`rtf_to_pdf_converter.py`),
-  following KVGrainy's `theming.py` pattern (`apply_theme`,
-  `capture_defaults` for "System Default").
-- [ ] Add `kvg-updater` (pinned tag) + an `updater.py` wrapper, same as
-  KVGroove above.
+- [x] Added `visual-assault-tkinter` + a theme picker (`theming.py`,
+  adapted for plain `tk` widgets rather than `ttk` since this UI doesn't
+  use `ttk`), plus `kvg-updater` + an `updater.py` wrapper and a Help
+  menu — see [PR #5](https://github.com/gerp93/KVG_Converter/pull/5).
+  Not exercised live (no `tkinter`/display in the dev environment used);
+  verify the theme picker and update flow manually before merging.
 
 ### KVGenius
 - [ ] Remove the `flet_kvg_themes` import path entirely — it's dead (not

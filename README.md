@@ -28,6 +28,13 @@ Theme source of truth is [VisualAssault](https://github.com/gerp93/VisualAssault
 `themes/THEMES.md`). Consumers must pin to a released tag
 (`@vX.Y.Z`), never `@main` — see `themes-versioning.md`.
 
+## Licensing
+
+Default license for every active repo is **AGPL-3.0**, checked against that
+repo's actual dependencies case by case (permissive/LGPL/GPL-or-later
+dependencies are fine; anything more restrictive is a real blocker) — see
+`licensing.md`.
+
 ## Update-check
 
 Self-update (check GitHub Releases, download, replace the running binary)

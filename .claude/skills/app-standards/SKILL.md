@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), and self-update (kvg_updater/kvgupdate, pinned by tag). Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), and licensing (AGPL-3.0 by default). Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -8,8 +8,26 @@ description: gerp93 app-repo conventions — theming (VisualAssault, pinned by t
 Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards).
 This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
-`update-check-versioning.md` / `.github/workflows/` over anything cached
-here.
+`update-check-versioning.md` / `licensing.md` / `.github/workflows/` over
+anything cached here.
+
+## Licensing
+
+- Default license is **AGPL-3.0** for every active repo — copy an existing
+  repo's `LICENSE` file rather than hand-typing it (they're all identical
+  boilerplate).
+- **Before assuming AGPL-3.0 is fine, check the repo's dependencies.**
+  Permissive licenses (MIT/BSD/Apache-2.0/etc.) and LGPL are always
+  compatible. GPL-2.0-**or-later** is compatible; plain GPL-2.0-only is
+  **not** and blocks AGPL-3.0 for that repo. See `licensing.md` for how to
+  actually check a dependency's declared license instead of guessing from
+  its name or reputation.
+- **Violation to flag:** a repo with no `LICENSE` file at all.
+- **Violation to flag:** a repo whose dependencies are incompatible with its
+  declared license (e.g. AGPL-3.0 declared, but something GPL-2.0-only or
+  source-available/non-commercial is a dependency) — this needs a human
+  decision (swap the dependency, or use a different license for that one
+  repo), not a silent fix.
 
 ## Theming
 
@@ -94,8 +112,9 @@ Stream Deck plugin — see below).
 
 When asked to check a repo against these standards:
 1. Identify its category from the table above.
-2. Check theming (if it has a UI), release/CI pipeline, and update-check
-   (if it ships a binary end users run directly) against the checklists.
+2. Check theming (if it has a UI), release/CI pipeline, update-check
+   (if it ships a binary end users run directly), and licensing against
+   the checklists.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo

@@ -65,6 +65,16 @@ branding" checklist for the full per-surface breakdown. Sweeper
 implementations; `release-python-gui.yml`'s `icon_path` input embeds the
 generated icon into PyInstaller-built executables.
 
+## Release notes
+
+Every `release-*.yml` build variant prepends install instructions to the
+release body (`softprops/action-gh-release`'s `body:` +
+`generate_release_notes: true` puts them ahead of the auto-generated
+changelog; `release-electron.yml` patches them on afterward since
+electron-builder self-publishes). Not retroactive — only releases cut after
+a repo picks up the updated workflow get it. See the `app-standards`
+skill's "Release notes" section.
+
 ## Release workflow catalog
 
 | Workflow | For | Used by |

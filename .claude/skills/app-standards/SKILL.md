@@ -117,6 +117,25 @@ user can see it, not just dropped into the README and forgotten.
   instead of generated from the one source mark by a checked-in script —
   same drift risk as a hand-rolled theme palette.
 
+## Release notes
+
+Every `release-*.yml` build variant with a `softprops/action-gh-release` (or
+equivalent) step prepends a short "## Installing" blurb to the release body
+via `body:` + `generate_release_notes: true` (GitHub's API pre-pends `body`
+to the auto-generated changelog, so both show up: install instructions on
+top, changelog below). This isn't retroactive — it only applies to releases
+cut after a repo's workflow is on the updated `release-*.yml`, existing
+releases keep whatever notes they already had.
+- **Violation to flag:** a `release-*.yml` variant whose publish step has
+  `generate_release_notes: true` but no `body`.
+- Electron is the odd one out: `electron-builder --publish always` uploads
+  straight to the release with no `softprops/action-gh-release` step to
+  hand a `body` to, so `release-electron.yml` patches the body onto the
+  release electron-builder already created via a follow-up `gh api` PATCH
+  job (`release-notes`, `needs: build`). Follow that pattern if a future
+  stack's build tool similarly self-publishes instead of going through
+  `softprops/action-gh-release`.
+
 ## Release / CI pipeline
 
 First classify the repo — the shape of "release" differs by category:

@@ -60,3 +60,22 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # No Apple/Windows signing certs configured — build unsigned artifacts.
           CSC_IDENTITY_AUTO_DISCOVERY: false
+
+  release-notes:
+    # electron-builder publishes each matrix leg's assets straight to the
+    # release itself (no separate softprops/action-gh-release step to hand
+    # a `body` to like the other release-*.yml workflows), so this patches
+    # install instructions onto the release electron-builder already
+    # created, once every platform has finished uploading its asset.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Add install instructions to release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          BODY=$(printf '## Installing\n\nDownload the asset for your platform below:\n\n- **Windows** — the `.exe` installer\n- **macOS** — the `.dmg` disk image\n- **Linux** — the `.AppImage` (make it executable first: `chmod +x *.AppImage`)\n\nThese builds are unsigned, so Windows SmartScreen and macOS Gatekeeper will warn about an unrecognized publisher — click through to launch it (right-click → "Open" on macOS the first time).\n')
+          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.version }}" --jq .id)
+          gh api -X PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" \
+            -f body="$BODY" -F generate_release_notes=true

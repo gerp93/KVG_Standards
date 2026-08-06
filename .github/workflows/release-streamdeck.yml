@@ -93,3 +93,7 @@ jobs:
           name: ${{ inputs.plugin_name }} ${{ inputs.version }}
           files: dist/*.streamDeckPlugin
           generate_release_notes: true
+          body: |
+            ## Installing
+
+            Download `${{ inputs.plugin_name }}.streamDeckPlugin` below and double-click it — Stream Deck installs it automatically. If Stream Deck is already running, restart it (or just reopen the app) to pick up the new version.

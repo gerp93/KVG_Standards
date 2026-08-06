@@ -156,3 +156,13 @@ jobs:
           name: ${{ inputs.app_name }} ${{ inputs.version }}
           files: release_assets/*
           generate_release_notes: true
+          body: |
+            ## Installing
+
+            Download the build for your platform below and run it directly — no installer needed:
+
+            - **Windows** — `${{ inputs.app_name }}-windows.exe`
+            - **macOS** — `${{ inputs.app_name }}-macos` (make it executable first: `chmod +x ${{ inputs.app_name }}-macos`)
+            - **Linux** — `${{ inputs.app_name }}-linux` (make it executable first: `chmod +x ${{ inputs.app_name }}-linux`)
+
+            These builds are unsigned (no code-signing certificate configured), so Windows SmartScreen and macOS Gatekeeper will warn about an unrecognized publisher — click through ("More info" → "Run anyway" on Windows, right-click → "Open" on macOS) to launch it.

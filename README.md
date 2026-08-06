@@ -53,6 +53,18 @@ file (for backup/syncing), not hardcode a fixed path:
 Python apps. Electron apps follow Sweeper's `src/main/dbLocation.ts`
 directly as the reference pattern — see `db-location-versioning.md`.
 
+## Logo & branding
+
+Every new app repo checks in a source logo (`assets/logo.png`) and generates
+every other size/format from it via a one-off `scripts/generate-icons.*`
+script — README header, in-app window/taskbar icon, in-app UI usage, and the
+packaged binary/installer icon. See the `app-standards` skill's "Logo &
+branding" checklist for the full per-surface breakdown. Sweeper
+(`scripts/generate-icons.js`, Electron/sharp) and KVGrainy
+(`scripts/generate_icons.py`, PyInstaller/Pillow) are the reference
+implementations; `release-python-gui.yml`'s `icon_path` input embeds the
+generated icon into PyInstaller-built executables.
+
 ## Release workflow catalog
 
 | Workflow | For | Used by |

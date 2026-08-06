@@ -38,6 +38,11 @@ on:
         required: false
         type: string
         default: ''
+      icon_path:
+        description: 'Base path (no extension) to a generated icon pair, e.g. "assets/icon" for assets/icon.ico + assets/icon.icns. Embeds the app icon into the built executable on Windows/macOS; ignored on Linux (PyInstaller cannot embed one there).'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -104,7 +109,17 @@ jobs:
           WINDOWED_ARG=()
           if [ "${{ inputs.windowed }}" = "true" ]; then WINDOWED_ARG=(--windowed); fi
 
-          python -m PyInstaller --noconfirm --onefile "${WINDOWED_ARG[@]}" \
+          ICON_ARG=()
+          if [ -n "${{ inputs.icon_path }}" ]; then
+            if [ "${{ runner.os }}" = "Windows" ]; then
+              ICON_ARG=(--icon "${{ inputs.icon_path }}.ico")
+            elif [ "${{ runner.os }}" = "macOS" ]; then
+              ICON_ARG=(--icon "${{ inputs.icon_path }}.icns")
+            fi
+            # Linux: no --icon; PyInstaller can't embed one into an ELF binary.
+          fi
+
+          python -m PyInstaller --noconfirm --onefile "${WINDOWED_ARG[@]}" "${ICON_ARG[@]}" \
             --name "${{ inputs.app_name }}" "${ADD_DATA_ARGS[@]}" "${{ inputs.entry_point }}"
 
       - name: Stage artifact

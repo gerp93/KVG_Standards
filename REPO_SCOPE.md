@@ -127,13 +127,37 @@ release notes, VERSION_BUMP.md, TODO.md). Useful context, not current truth
   finds the right executable for the Flet version in use, before relying
   on this in production.
 - [x] Added `LICENSE` (AGPL-3.0) — see [PR #8](https://github.com/gerp93/KVGenius/pull/8), merged.
-- [ ] Wire `kvg_dblocation` into `src/database/chat_history.py`, which
-  currently hardcodes `db_path: str = "./chat_history.db"` — a relative
-  path with no way for the user to relocate it. Reuse `core.CACHE_DIR`'s
-  parent as the data directory (don't invent a second convention). Add a
-  Database Location section to the Settings tab (existing-file picker,
-  new-location picker, reset-to-default), same shape as Sweeper's. See
-  `db-location-versioning.md`.
+- **2026-08-07 re-audit** — [PR #9](https://github.com/gerp93/KVGenius/pull/9) (draft):
+  - [x] Wired `kvg_dblocation` into `src/database/chat_history.py` (pinned
+    `@main`, interim exception), reusing `core.CACHE_DIR`'s parent as the
+    data directory. Added a Database Location section to the Settings tab
+    (choose existing file, choose new location, reset to default, restart
+    prompt) — same shape as Sweeper's.
+  - [x] **Found and fixed a real bug**: the update-check wiring claimed
+    done in PR #7 only existed in `ui/tabs/settings.py`, which is dead code
+    — `desktop_app.py` (the actual `release-flet.yml` entry point) never
+    imported `updater.py` at all, and its own `SettingsTab` had no
+    version/check-updates UI, so `main()`'s
+    `settings_tab.check_for_updates_silently()` call raised `AttributeError`
+    in a background thread on every launch. Ported the working
+    implementation into `desktop_app.py`'s real `SettingsTab`.
+  - [ ] **Still open**: live verification of update-check against a real
+    `flet build` output (needs a display/build toolchain) — unchanged from
+    before.
+  - [x] Fixed README: added a KVG_Standards back-link (previously absent)
+    and corrected the License section (said "Open source for educational
+    purposes", contradicting the AGPL-3.0 `LICENSE` file).
+  - [x] Added missing `VERSION_BUMP.md` and `TODO.md`.
+  - [ ] **Needs a human decision**: no `assets/logo.png` or any icon
+    anywhere in the repo (no README image, no window/taskbar icon, no
+    packaged-binary icon) — needs real artwork, not fabricated by an
+    automated pass.
+  - Repo-health note (not a standards item, not fixed): `ui/tabs/chat.py`,
+    `ui/tabs/settings.py`, `ui/tabs/prompts.py` are dead code — unused
+    duplicate `ChatTab`/`SettingsTab`/`PromptLibraryTab` classes shadowed
+    by `desktop_app.py`'s own local versions. This is how the update-check
+    bug above went unnoticed. Worth deciding whether to delete or
+    consolidate.
 
 ### KVGauge (Stream Deck plugin)
 - [ ] **Needs a decision, not just an implementation** on theming: does a

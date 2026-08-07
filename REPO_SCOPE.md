@@ -27,7 +27,7 @@ kvgrep is excluded (no code yet).
 | KVGauge | Stream Deck plugin | TBD — needs a decision, see below | Yes | N/A by design | TBD — plugin has its own icon conventions (manifest.json), see below | Yes | Yes | N/A | Yes |
 | gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
 | card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | TBD — web app, desktop icon surfaces don't apply but a README/site logo might | N/A — CI gate only, no release pipeline | N/A | TBD — unknown if it uses SQLite | Yes |
-| timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — same as card-judge | N/A | N/A | TBD — unknown if it uses SQLite | Yes |
+| timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -142,6 +142,23 @@ release notes, VERSION_BUMP.md, TODO.md). Useful context, not current truth
   chrome/conventions? Update-check is already resolved as N/A (see gap
   matrix) — recommend treating theming the same way (out of scope) unless
   there's a specific reason to want it.
+
+### timeline-trivia
+- [x] Compliance audit (2026-08-07): CI (`ci-go.yml@main`, `working_directory: src`)
+  matches `templates/ci.yml` exactly, no vestigial release-binary workflow
+  present — deploy confirmed via `gameshell-deploy`/DO App Platform push
+  (README's own "Deployment" section). Theming confirmed inherited from
+  `gameshell-framework`'s vendored CSS (`/gs/` mount via
+  `gsBootstrap.MountStaticAssets`) — no local `colors.css`/hand-rolled
+  palette. Licensing: `LICENSE` present (AGPL-3.0, matches boilerplate),
+  dependencies (`gameshell-framework`, `google/uuid`, `gorilla/websocket`,
+  `go-sql-driver/mysql`, `golang.org/x/crypto`) all permissive/MPL-2.0, no
+  blocker. DB location: confirmed MariaDB (server-side), standard doesn't
+  apply. Found and fixed missing `TODO.md` and docs never mentioning
+  KVG_Standards — see
+  [PR #3](https://github.com/gerp93/timeline-trivia/pull/3) (draft).
+  Logo/branding gap noted in the matrix above but left as-is (low
+  priority per web-app category, no fix implemented).
 
 ## Open questions (theming)
 

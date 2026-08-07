@@ -80,17 +80,31 @@ release notes, VERSION_BUMP.md, TODO.md). Useful context, not current truth
   [gameshell-deploy #12](https://github.com/gerp93/gameshell-deploy/pull/12).
 
 ### Sweeper
-- [ ] Re-vendor `src/renderer/themes.css` from VisualAssault
-  `packages/css/themes.css` @ `v0.2.0` (same fix already applied to
-  gameshell-framework's `colors.css`). Simpler here than
-  gameshell-framework's case: no "Classic" section to preserve — the whole
-  file is VisualAssault content, so this can be a straight overwrite.
-- [ ] Add a header comment noting the source tag.
-- [ ] Update-check: nothing to do, already best-in-class.
+- [x] Re-vendored `src/renderer/themes.css` from VisualAssault
+  `packages/css/themes.css` @ `v0.2.0` — see
+  [PR #18](https://github.com/gerp93/Sweeper/pull/18) (draft). The old copy
+  was confirmed stale: missing `--color-surface`/`--color-border`/
+  `--color-text-muted`/`--color-accent-muted` on all 14 theme blocks, and
+  had no header comment. Straight overwrite (no "Classic" section here,
+  unlike gameshell-framework's `colors.css`); header comment now cites the
+  source tag.
+- [x] Update-check: confirmed already best-in-class (`electron-updater` in
+  `src/main/main.ts`) — nothing to do.
 - [x] Added `LICENSE` (AGPL-3.0) — see [PR #17](https://github.com/gerp93/Sweeper/pull/17), merged.
 - [x] Already has a working SQLite relocate feature (`src/main/dbLocation.ts`)
   — this became the reference pattern written up in
   `db-location-versioning.md`. Nothing to do here.
+- [x] Re-checked newer standards (2026-08-07 audit), all now fixed in
+  [PR #18](https://github.com/gerp93/Sweeper/pull/18) (draft):
+  neither `README.md` nor a `CLAUDE.md` mentioned KVG_Standards at all
+  (violation of "docs must point back here"); README was missing the logo
+  image and described a removed `.github/workflows/build.yml` instead of
+  the current `auto-release.yml`/`cut-release.yml`; `TODO.md` and
+  `VERSION_BUMP.md` were both missing despite `auto-release.yml` being
+  present; `package.json` still declared `"license": "MIT"` despite the
+  AGPL-3.0 `LICENSE` file. Logo & branding and release-notes patch job were
+  otherwise already fully wired (window icon, sidebar, packaged-binary
+  icon, `release-electron.yml`'s `release-notes` job) — no gap there.
 
 ### KVG_Converter
 - [x] Added `visual-assault-tkinter` + a theme picker (`theming.py`,

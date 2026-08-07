@@ -1,30 +1,33 @@
-# Rollout TODO
+# Repo scope
 
-Tracks bringing every in-scope app repo into full alignment on four
-things: **theming**, **auto-release-on-push**, **update-check**, and
-**licensing** — plus **SQLite database location** where a repo stores its
-own data in SQLite (KVGenius, Sweeper). This is a living checklist —
-update it as items land, don't let it go stale.
+A reference matrix of which KVG_Standards standards apply to each active
+app repo. Cells reflect **scope** (does this standard apply to this repo,
+based on its category — see the `app-standards` skill's "Release / CI
+pipeline" table) not verified current compliance — this pass didn't
+re-check every repo's actual state. Treat this as the map of what *should*
+be true; a future session should periodically re-audit each repo against
+it, note actual compliance/drift here (or back in a per-standard section
+below), and keep it current as repos are added, retired, or reclassified.
 
 Scope: the 10 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
 timeline-trivia). VisualAssault is the theme producer, not a consumer.
 kvgrep is excluded (no code yet).
 
-## Gap matrix
+## Scope matrix
 
-| Repo | Theming | Auto-release-on-push | Update-check | Licensing |
-|---|---|---|---|---|
-| KVGrainy | ✅ VisualAssault v0.2.0, pinned | ✅ | ✅ migrated to `kvg_updater` (pinned `@main`, no tag yet — see [PR #19](https://github.com/gerp93/KVGrainy/pull/19)) | ✅ AGPL-3.0 |
-| KVGroove | ✅ VisualAssault v0.2.0, pinned | ✅ | ✅ `kvg_updater` wired in (pinned `@main`, no tag yet — see [PR #5](https://github.com/gerp93/KVGroove/pull/5)) | ✅ AGPL-3.0 (deps checked: `pygame` LGPL, `mutagen` GPL-2.0-or-later — both fine, see `licensing.md`) |
-| gameshell-deploy (Wails GUI) | ✅ VisualAssault, hand-transcribed, tokens current | ✅ | ❌ **gap** — add `kvgupdate` (new, unverified against a real build — see its README) | ❌ **gap** — no `LICENSE` file, see [PR TODO below](#gameshell-deploy-wails-gui) |
-| Sweeper (Electron) | ⚠️ **stale vendor** — byte-copy of VisualAssault CSS missing `surface`/`border`/`textMuted`/`accentMuted` (pre-v0.2.0 snapshot, same drift class already fixed in gameshell-framework) | ✅ | ✅ already best-in-class (`electron-updater`, wired up) — reference implementation for future Electron apps | ❌ **gap** — no `LICENSE` file |
-| KVG_Converter | ✅ VisualAssault v0.2.0, pinned — see [PR #5](https://github.com/gerp93/KVG_Converter/pull/5) | ✅ | ✅ `kvg_updater` wired in (pinned `@main`, no tag yet — see [PR #5](https://github.com/gerp93/KVG_Converter/pull/5)) | ✅ AGPL-3.0 |
-| KVGenius (Flet) | ✅ VisualAssault v0.2.0, pinned — see [PR #7](https://github.com/gerp93/KVGenius/pull/7) | ✅ | ✅ `kvg_updater` bundle mode wired in (pinned `@main`, no tag yet — see [PR #7](https://github.com/gerp93/KVGenius/pull/7)); **not yet verified against a real `flet build` output** | ❌ **gap** — no `LICENSE` file (deps checked: torch/transformers/diffusers/accelerate/safetensors/peft are BSD/Apache-2.0, bitsandbytes/flask MIT/BSD, flet Apache-2.0 — all fine) |
-| KVGauge (Stream Deck plugin) | N/A? — needs a decision, see below | ✅ | **N/A by design** — Stream Deck plugins reinstall via `.streamDeckPlugin`/Marketplace, not self-update | ✅ AGPL-3.0 |
-| gameshell-framework (Go library) | ✅ fixed this session (vendored VisualAssault CSS, re-vendor script) — covers card-judge + timeline-trivia too | N/A by design (tag-only release for `go.mod` pinning) | N/A (server-side, no client to update) | ✅ AGPL-3.0 |
-| card-judge | ✅ (inherits from gameshell-framework) | N/A by design (deployed via gameshell-deploy/DO, not a release binary) | N/A | ✅ AGPL-3.0 |
-| timeline-trivia | ✅ (inherits from gameshell-framework) | N/A by design | N/A | ✅ AGPL-3.0 |
+| Repo | Category | Theming | Licensing | Update-check | Logo & branding | Release notes | VERSION_BUMP.md | DB location | TODO.md |
+|---|---|---|---|---|---|---|---|---|---|
+| KVGrainy | Python/PyInstaller GUI | Yes | Yes | Yes | Yes | Yes | Yes | N/A | Yes |
+| KVGroove | Python/PyInstaller GUI | Yes | Yes | Yes | Yes | Yes | Yes | N/A | Yes |
+| gameshell-deploy (`gui/`) | Go/Wails GUI | Yes | Yes | Yes | Yes | Yes | Yes | N/A | Yes |
+| Sweeper | Electron GUI | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| KVG_Converter | Python/PyInstaller GUI | Yes | Yes | Yes | Yes | Yes | Yes | N/A | Yes |
+| KVGenius | Flet GUI | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| KVGauge | Stream Deck plugin | TBD — needs a decision, see below | Yes | N/A by design | TBD — plugin has its own icon conventions (manifest.json), see below | Yes | Yes | N/A | Yes |
+| gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
+| card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | TBD — web app, desktop icon surfaces don't apply but a README/site logo might | N/A — CI gate only, no release pipeline | N/A | TBD — unknown if it uses SQLite | Yes |
+| timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — same as card-judge | N/A | N/A | TBD — unknown if it uses SQLite | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -39,6 +42,12 @@ The rest of this doc's per-repo items reflect that; the old "needs design"
 section is gone.
 
 ## Action items by repo
+
+Detailed findings/history from the last real audit pass (theming,
+update-check, licensing, DB location) — predates the scope matrix above and
+hasn't been re-verified against the newer standards (logo & branding,
+release notes, VERSION_BUMP.md, TODO.md). Useful context, not current truth
+— re-check before trusting a ✅/❌ here.
 
 ### KVGrainy
 - [x] Migrate `updater.py` to a thin wrapper around `kvg_updater` — see

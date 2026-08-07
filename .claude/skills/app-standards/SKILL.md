@@ -237,14 +237,36 @@ this).
   `chat_history.py: db_path: str = "./chat_history.db"` before this was
   fixed).
 
+## Per-repo TODO.md
+
+Every active app repo gets a `TODO.md` at its root (copy
+`templates/TODO.md`) — that app's own backlog of future features and
+fixes. This is **not** a KVG_Standards compliance list (that's
+`REPO_SCOPE.md`'s job) — it's product/feature backlog specific to that one
+app, maintained by whoever works on it.
+- **Violation to flag:** an active app repo with no `TODO.md` at all.
+
+## Repo scope tracking
+
+[`REPO_SCOPE.md`](https://github.com/gerp93/KVG_Standards/blob/main/REPO_SCOPE.md)
+is the map of which standards apply to which active app repo. It's a scope
+reference (what should apply, by category), not a live compliance
+snapshot — when an audit pass finds real drift, note it there (or in that
+file's per-repo detail section) so the next session doesn't have to
+re-derive it from scratch. Add new repos to it as they're created; remove
+retired ones.
+
 ## Audit workflow
 
 When asked to check a repo against these standards:
-1. Identify its category from the table above.
+1. Identify its category from the table above (cross-check against
+   `REPO_SCOPE.md` — add the repo there if it's missing).
 2. Check theming (if it has a UI), release/CI pipeline, update-check
-   (if it ships a binary end users run directly), licensing, and database
-   location (if it stores data in SQLite) against the checklists.
+   (if it ships a binary end users run directly), licensing, logo &
+   branding, release notes, `VERSION_BUMP.md`, database location (if it
+   stores data in SQLite), and `TODO.md` against the checklists above.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo
-   so the diff is reviewable, not a blind mass-apply.
+   so the diff is reviewable, not a blind mass-apply. Update `REPO_SCOPE.md`
+   with what you found.

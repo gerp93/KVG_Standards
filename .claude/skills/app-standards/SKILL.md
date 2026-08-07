@@ -153,6 +153,14 @@ default (this is the org's actual expectation — don't default to
 manual-only), and `cut-release.yml` stays available for a deliberately
 chosen version number when you want one instead of the auto-bump.
 
+Every repo with `auto-release.yml` also gets `templates/VERSION_BUMP.md`
+copied in as `VERSION_BUMP.md` at the repo root. `auto-release.yml` bumps
+on *every* push to `main` regardless of what changed, so when you need a
+release with no real code change (e.g. to pick up an updated KVG_Standards
+reusable workflow), editing this file and adding a dated one-line entry
+gives a real, reviewable diff instead of an empty commit — see KVGrainy's
+`VERSION_BUMP.md` for the reference implementation.
+
 **Violations to flag:**
 - A local copy of build/release logic that duplicates a `KVG_Standards`
   reusable workflow instead of calling it via `uses:`.
@@ -163,6 +171,8 @@ chosen version number when you want one instead of the auto-bump.
 - Two repos independently reinventing the same script (e.g. a copy-pasted
   `version_bump.sh`) — that's exactly the drift this repo exists to stop;
   it belongs in `KVG_Standards` instead.
+- A repo with `auto-release.yml` but no `VERSION_BUMP.md`, or empty
+  `git commit --allow-empty` commits used to force a release instead of it.
 
 ## Update-check
 

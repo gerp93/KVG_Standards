@@ -115,5 +115,8 @@ number differently. Don't ship a repo with only one of the two.
    apply, like the Go-web-app case).
 2. Copy **both** `templates/auto-release.yml` and `templates/cut-release.yml`
    into the repo's `.github/workflows/`, filling in the `TODO`s in each.
-3. If it's an existing repo with a local release/build workflow already,
+3. Copy `templates/VERSION_BUMP.md` to the repo root as `VERSION_BUMP.md` —
+   the tracked way to force a release with no code change (edit + a dated
+   entry) instead of an empty commit.
+4. If it's an existing repo with a local release/build workflow already,
    remove that workflow — don't run both.

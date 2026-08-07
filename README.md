@@ -4,9 +4,8 @@ Source of truth for how gerp93 app repos build, release, and theme
 themselves — so that "the standard" lives in one place and repos pull from
 it, instead of each repo growing its own copy that quietly drifts.
 
-See **[`ROLLOUT_TODO.md`](ROLLOUT_TODO.md)** for the current gap matrix and
-per-repo checklist of what's not yet aligned (theming, auto-release,
-update-check).
+See **[`REPO_SCOPE.md`](REPO_SCOPE.md)** for which standards apply to which
+active app repo, plus historical per-repo audit findings.
 
 ## What lives here
 
@@ -75,6 +74,12 @@ electron-builder self-publishes). Not retroactive — only releases cut after
 a repo picks up the updated workflow get it. See the `app-standards`
 skill's "Release notes" section.
 
+## Per-repo TODO.md
+
+Every active app repo gets a `TODO.md` at its root (`templates/TODO.md`) —
+its own backlog of future features and fixes, separate from
+`REPO_SCOPE.md`'s standards-compliance tracking.
+
 ## Release workflow catalog
 
 | Workflow | For | Used by |
@@ -118,5 +123,8 @@ number differently. Don't ship a repo with only one of the two.
 3. Copy `templates/VERSION_BUMP.md` to the repo root as `VERSION_BUMP.md` —
    the tracked way to force a release with no code change (edit + a dated
    entry) instead of an empty commit.
-4. If it's an existing repo with a local release/build workflow already,
+4. Copy `templates/TODO.md` to the repo root as `TODO.md` — that app's own
+   feature/fix backlog.
+5. Add the new repo to `REPO_SCOPE.md`'s scope matrix.
+6. If it's an existing repo with a local release/build workflow already,
    remove that workflow — don't run both.

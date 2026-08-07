@@ -114,3 +114,13 @@ jobs:
           name: ${{ inputs.app_name }} ${{ inputs.version }}
           files: dist/*
           generate_release_notes: true
+          body: |
+            ## Installing
+
+            Download the archive for your platform below and extract it — no installer needed:
+
+            - **Windows** — `${{ inputs.app_name }}-${{ inputs.version }}-windows.zip` → run the `.exe` inside
+            - **macOS** — `${{ inputs.app_name }}-${{ inputs.version }}-macos.tar.gz` → open the `.app` inside
+            - **Linux** — `${{ inputs.app_name }}-${{ inputs.version }}-linux.tar.gz` → run the extracted binary (`chmod +x` it first)
+
+            These builds are unsigned, so Windows SmartScreen and macOS Gatekeeper will warn about an unrecognized publisher — click through to launch it (right-click → "Open" on macOS the first time).

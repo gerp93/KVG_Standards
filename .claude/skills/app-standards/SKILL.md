@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), and SQLite database location (kvg_dblocation, pinned by tag). Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -10,6 +10,21 @@ This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
 `update-check-versioning.md` / `licensing.md` / `db-location-versioning.md`
 / `.github/workflows/` over anything cached here.
+
+## Docs must point back here
+
+Every consumer repo's `README.md` and/or `CLAUDE.md` must link to
+[gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards) and state
+that the repo follows it — not just scattered incidental links to one
+specific doc (a `themes-versioning.md` link buried in a dependency note
+doesn't count on its own). Someone reading the repo's own docs should be
+able to tell it's a KVG_Standards consumer and know where to go for the
+actual rules.
+- **Violation to flag:** a consumer repo whose docs never mention
+  KVG_Standards at all.
+- **Violation to flag:** a consumer repo that only links to KVG_Standards
+  in passing for a single topic (e.g. just the theming pin) without ever
+  stating that it follows the standard as a whole.
 
 ## New tech stacks
 

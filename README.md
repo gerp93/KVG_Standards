@@ -126,5 +126,8 @@ number differently. Don't ship a repo with only one of the two.
 4. Copy `templates/TODO.md` to the repo root as `TODO.md` — that app's own
    feature/fix backlog.
 5. Add the new repo to `REPO_SCOPE.md`'s scope matrix.
-6. If it's an existing repo with a local release/build workflow already,
+6. Add a pointer to KVG_Standards in the repo's `README.md` and/or
+   `CLAUDE.md`, stating that it follows these standards — not just an
+   incidental link buried in one topic's notes.
+7. If it's an existing repo with a local release/build workflow already,
    remove that workflow — don't run both.

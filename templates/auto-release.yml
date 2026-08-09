@@ -50,6 +50,7 @@ jobs:
     #   release-electron.yml    (Electron)
     #   release-flet.yml        (Flet)
     #   release-streamdeck.yml  (Elgato Stream Deck plugin)
+    #   release-godot.yml       (Godot desktop game — GDScript only, no C#/.NET)
     uses: gerp93/KVG_Standards/.github/workflows/release-python-gui.yml@main
     with:
       version: ${{ needs.version.outputs.new_tag }}

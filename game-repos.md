@@ -56,20 +56,36 @@ save file is the same concern under a different name.
   are small and engines put them somewhere sane by default. Don't flag its
   absence.
 
-### Update-check depends on distribution
+### Update-check depends on distribution, and games only notify
 
 The update-check standard assumes the app is downloaded directly from GitHub
-Releases and must replace its own binary. That holds for a game distributed
-that way, and does **not** hold for one distributed through a storefront.
+Releases and must replace its own binary. That holds for a game distributed that
+way, and does **not** hold for one distributed through a storefront.
 
-- **Direct download (GitHub Releases, itch.io direct):** update-check applies,
-  and needs a per-engine implementation — a new `packages/` entry, designed and
-  approved like any other new stack.
+- **Direct download (GitHub Releases, itch.io direct):** in scope. Use
+  [`packages/godot/kvg_update`](packages/godot/kvg_update).
 - **Storefront (Steam, itch app, console):** out of scope by design. The
   storefront owns updating, the same reasoning that makes KVGauge's Stream Deck
   plugin a documented exception rather than a gap.
-- Record which of these a game repo is in `REPO_SCOPE.md` rather than leaving
-  it ambiguous — the answer changes whether a missing updater is a gap.
+- Record which of these a game repo is in `REPO_SCOPE.md` rather than leaving it
+  ambiguous — the answer changes whether a missing updater is a gap.
+
+**The Godot package is notify-only, and that is the standard, not a shortcut.**
+`kvg_updater` and `kvgupdate` self-replace because their apps are single
+binaries built around that flow. A Godot export is an executable plus resources
+and the engine holds file handles on them, so replacing it in place is
+platform-specific and easy to get subtly wrong — the exact class of bug the
+shared-package rule exists to stop multiplying. A game therefore reports that a
+new version exists and opens the download page. If one genuinely needs true
+self-update, design it in KVG_Standards, not in the game repo.
+
+**Vendored, not pinned.** Godot has no dependency manager that can pin a git ref
+the way `requirements.txt` or `go.mod` can, so the package is copied into
+`addons/kvg_update/` with a header comment recording its source commit plus a
+re-vendor script — the same approach already used for VisualAssault's CSS in
+gameshell-framework and Sweeper.
+- **Violation to flag:** a vendored copy with no pin comment or no re-vendor
+  script. That is how silent drift starts.
 
 ### Logo & branding: same surfaces, engine-specific plumbing
 
@@ -105,30 +121,40 @@ into the shipped build, and an AGPL-3.0 repo license does not discharge them:
 ## Release / CI
 
 Games are the "Desktop GUI app / plugin" category by shape — they ship a binary
-end users download, so they want **both** `auto-release.yml` and
-`cut-release.yml` calling a `release-*.yml` build variant.
+end users download, so they get **both** `auto-release.yml` and
+`cut-release.yml`, calling
+[`release-godot.yml`](.github/workflows/release-godot.yml).
 
-**There is no game-engine build variant yet.** Adding one is a new-tech-stack
-decision under the process in `CLAUDE.md` and the `app-standards` skill: design
-it, get human approval, add it here, update the skill, and only then wire it
-into the game repo. Do not hand-roll a release workflow inside a game repo in
-the meantime.
+That variant differs from the others in ways worth knowing before editing it:
 
-What such a variant has to deal with, so the design isn't started from scratch:
+- **One Linux runner, not a three-OS matrix.** Godot's export templates are
+  cross-platform, so a single runner holding them emits Windows, macOS and Linux
+  builds in one pass. A matrix would triple runtime and engine downloads for
+  nothing. The cost is that macOS output is an unsigned `.zip` rather than a
+  signed/notarized `.dmg` (that needs a macOS runner plus certificates) and
+  Windows icon embedding is skipped (needs `rcedit`). Both are moot while builds
+  are unsigned.
+- **Export templates are version-locked.** The `.tpz` download must match the
+  engine version exactly or export fails with "template not found", which is why
+  `godot_version` is a required input rather than "latest".
+- **`export_presets.cfg` must be committed.** Godot cannot export without it and
+  fresh projects gitignore it, since it can carry signing paths and keystore
+  passwords. Either commit a secret-free preset file and keep signing material
+  in Actions secrets, or reconstruct it in CI. The workflow fails with an
+  explicit message rather than a confusing engine error if it is absent.
+- **Version injection has no `_version.py` equivalent.** The workflow stamps the
+  tag into `project.godot`'s `config/version`, which is what the in-game update
+  check compares against GitHub's latest tag.
+- **Godot exits 0 on some export failures**, so the workflow asserts each
+  artifact exists and is non-empty instead of trusting exit status. Keep that if
+  you touch it.
 
-- **Headless engine export**, not a language toolchain. For Godot that means
-  fetching a matching engine binary *and* its export templates (the templates
-  are a separate download and must match the engine version exactly), then
-  `godot --headless --export-release <preset> <out>`.
-- **Export presets are repo config, not workflow input.** `export_presets.cfg`
-  defines the targets, and CI cannot export without it. Note that **airport's
-  own `.gitignore` currently excludes it** (alongside `export.cfg`) — a sane
-  default, since that file can carry signing paths and keystore passwords, but
-  it means there is nothing for CI to build from today. The design has to pick
-  one: commit a secret-free preset file and keep signing material in Actions
-  secrets, or reconstruct the presets in CI.
-- **Multi-artifact releases.** One tag produces Windows/Mac/Linux builds,
-  usually zipped per platform, unlike the single-binary variants.
-- **Version injection** has no `_version.py`/`package.json` equivalent —
-  the version lives in `project.godot` (`config/version`) or a generated
-  autoload constant.
+### Starting pre-1.0
+
+`auto-release.yml`'s version bump starts from whatever the newest existing tag
+is, so cut the first release deliberately with `cut-release.yml` at `v0.1.0`
+rather than letting the auto-bump pick `v0.0.1`. After that, auto-release keeps
+it pre-1.0 on its own: Conventional Commit `fix:` gives `0.1.x`, `feat:` gives
+`0.x.0`, and **only** an explicit breaking change (`feat!:` or a
+`BREAKING CHANGE:` footer) jumps to `1.0.0` — so avoid those until the game is
+genuinely ready to claim it.

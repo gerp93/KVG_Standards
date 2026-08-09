@@ -41,8 +41,12 @@ is a shared component too, not something each app reinvents:
 [`packages/python/kvg_updater`](packages/python/kvg_updater) (PyInstaller
 apps) and [`packages/go/kvgupdate`](packages/go/kvgupdate) (Wails/Go apps).
 Electron apps use `electron-updater` directly (see Sweeper's
-`src/main/main.ts`) — no KVG_Standards package needed there. Consumers pin
-to a released tag, never `@main` — see `update-check-versioning.md`.
+`src/main/main.ts`) — no KVG_Standards package needed there. Godot games use
+[`packages/godot/kvg_update`](packages/godot/kvg_update), which checks and
+notifies but deliberately does **not** self-replace — see that package's README
+for why, and note it is vendored rather than pinned, since Godot has no
+dependency manager that can pin a git ref. Consumers pin to a released tag,
+never `@main` — see `update-check-versioning.md`.
 
 ## SQLite database location
 
@@ -84,8 +88,9 @@ standard renamed; update-check depends on direct-download vs storefront), and
 the one obligation with no analogue elsewhere: a permissively-licensed engine
 bundled into an exported build still needs its copyright notice shipped.
 
-No game-engine `release-*.yml` variant exists yet — that's a new-tech-stack
-decision, and `game-repos.md` lists what the design has to handle.
+Games build via [`release-godot.yml`](.github/workflows/release-godot.yml) and
+check for updates with
+[`packages/godot/kvg_update`](packages/godot/kvg_update).
 
 ## Per-repo TODO.md
 
@@ -103,7 +108,7 @@ its own backlog of future features and fixes, separate from
 | `release-flet.yml` | Flet desktop apps | kvgenius |
 | `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
 | `ci-go.yml` | Go build+vet gate (library or web app) | gameshell-framework, card-judge, timeline-trivia |
-| _(none yet)_ | Game-engine builds (Godot export) — needs designing, see [`game-repos.md`](game-repos.md) | airport |
+| `release-godot.yml` | Godot 4 game projects (cross-exports all three platforms from one Linux runner) | airport |
 
 There's no `release-go-binary.yml`/similar for plain CLI-only Go apps in
 this catalog on purpose: `card-judge` and `timeline-trivia` are Go *web

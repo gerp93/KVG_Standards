@@ -1,0 +1,183 @@
+name: Release (Godot game)
+
+# Reusable build+release workflow for Godot 4 game projects. Callers tag first
+# (see templates/auto-release.yml / templates/cut-release.yml), then call this
+# with that tag.
+#
+# Contract: the caller's repo must have `project.godot` at its root and a
+# COMMITTED `export_presets.cfg` defining the three presets named below. Godot
+# cannot export without that file, and it is gitignored by default in fresh
+# projects — see game-repos.md.
+#
+# Unlike the other release-*.yml variants this uses ONE Linux runner rather than
+# a three-OS matrix. Godot's export templates are cross-platform: a Linux
+# runner holding the templates can emit Windows, macOS and Linux builds in one
+# pass, so a matrix would triple the runtime and the engine download for no
+# benefit. The tradeoff is that macOS output is an unsigned .zip rather than a
+# signed/notarized .dmg (that genuinely needs a macOS runner plus certificates)
+# and Windows .exe icon embedding is skipped (needs rcedit). Both are fine while
+# builds are unsigned anyway — revisit if code signing is ever set up.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v0.1.0'
+        required: true
+        type: string
+      app_name:
+        description: 'Display name for the built game, e.g. Airport'
+        required: true
+        type: string
+      godot_version:
+        description: 'Godot version to build with, e.g. 4.7.1 (must match the engine the project was authored in — export templates are version-locked)'
+        required: true
+        type: string
+      preset_windows:
+        description: 'Name of the Windows export preset in export_presets.cfg'
+        required: false
+        type: string
+        default: 'Windows Desktop'
+      preset_linux:
+        description: 'Name of the Linux export preset in export_presets.cfg'
+        required: false
+        type: string
+        default: 'Linux'
+      preset_macos:
+        description: 'Name of the macOS export preset in export_presets.cfg'
+        required: false
+        type: string
+        default: 'macOS'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot engine and export templates
+        shell: bash
+        env:
+          GODOT_VERSION: ${{ inputs.godot_version }}
+        run: |
+          set -euo pipefail
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+
+          curl -fsSL -o godot.zip "${BASE}/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+          chmod +x godot
+          echo "GODOT=$PWD/godot" >> "$GITHUB_ENV"
+
+          # Export templates are a separate download and must match the engine
+          # version exactly, or export fails with "template not found".
+          curl -fsSL -o templates.tpz "${BASE}/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          unzip -q templates.tpz
+          TEMPLATE_DIR="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$TEMPLATE_DIR"
+          mv templates/* "$TEMPLATE_DIR/"
+
+      - name: Verify export presets are committed
+        shell: bash
+        run: |
+          if [ ! -f export_presets.cfg ]; then
+            echo "::error::export_presets.cfg is missing. Godot cannot export without it," \
+                 "and fresh projects gitignore it by default. See game-repos.md."
+            exit 1
+          fi
+
+      - name: Stamp version into project.godot
+        shell: bash
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          # Strip the leading v so the in-game version string is a bare semver,
+          # matching what the other variants write into _version.py etc. This is
+          # what the update check compares against GitHub's latest tag.
+          VERSION="${RAW_VERSION#v}"
+          if grep -q '^config/version=' project.godot; then
+            sed -i "s|^config/version=.*|config/version=\"${VERSION}\"|" project.godot
+          else
+            sed -i "/^\[application\]/a config/version=\"${VERSION}\"" project.godot
+          fi
+          grep '^config/version=' project.godot
+
+      - name: Import project assets
+        shell: bash
+        run: |
+          # Godot needs its .godot/ cache built before export or it exports an
+          # incomplete project. This reliably emits benign errors on a headless
+          # first run (no display, missing .uid entries) and can exit non-zero
+          # while having done its job, so its status is not treated as fatal —
+          # a genuinely broken import surfaces in the export step below, which
+          # IS checked.
+          "$GODOT" --headless --import . 2>&1 | tail -20 || true
+
+      - name: Export builds
+        shell: bash
+        env:
+          APP: ${{ inputs.app_name }}
+        run: |
+          set -euo pipefail
+          mkdir -p build release_out
+
+          "$GODOT" --headless --export-release "${{ inputs.preset_windows }}" "build/${APP}.exe"
+          "$GODOT" --headless --export-release "${{ inputs.preset_linux }}" "build/${APP}.x86_64"
+          "$GODOT" --headless --export-release "${{ inputs.preset_macos }}" "build/${APP}.zip"
+
+          # Export can print errors and still exit 0, so assert the artifacts
+          # actually exist and are not empty rather than trusting the status.
+          for f in "${APP}.exe" "${APP}.x86_64" "${APP}.zip"; do
+            if [ ! -s "build/$f" ]; then
+              echo "::error::Export produced no usable build/$f"
+              exit 1
+            fi
+          done
+
+          cp "build/${APP}.exe" "release_out/${APP}-windows.exe"
+          cp "build/${APP}.x86_64" "release_out/${APP}-linux.x86_64"
+          cp "build/${APP}.zip" "release_out/${APP}-macos.zip"
+          ls -la release_out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.app_name }}-builds
+          path: release_out/*
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Flatten artifacts
+        run: |
+          mkdir -p release_assets
+          find artifacts -type f -exec cp {} release_assets/ \;
+          ls -la release_assets
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.app_name }} ${{ inputs.version }}
+          files: release_assets/*
+          generate_release_notes: true
+          body: |
+            ## Installing
+
+            Download the build for your platform below — no installer needed:
+
+            - **Windows** — `${{ inputs.app_name }}-windows.exe`
+            - **Linux** — `${{ inputs.app_name }}-linux.x86_64` (make it executable first: `chmod +x ${{ inputs.app_name }}-linux.x86_64`)
+            - **macOS** — `${{ inputs.app_name }}-macos.zip` (unzip, then right-click → "Open" the first time)
+
+            These builds are unsigned (no code-signing certificate configured), so Windows SmartScreen and macOS Gatekeeper will warn about an unrecognized publisher — click through ("More info" → "Run anyway" on Windows, right-click → "Open" on macOS) to launch it.
+
+            Built with Godot Engine, which is MIT licensed. The engine's copyright notice and full third-party license list are available in-game.

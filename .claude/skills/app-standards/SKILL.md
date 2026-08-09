@@ -50,6 +50,36 @@ A one-off implementation living only in the consumer app repo is exactly
 the drift this whole standard exists to prevent — don't let "we'll
 generalize it later" become permanent.
 
+## Game repos
+
+Game repos are app repos, but several checklists below assume a *utility
+desktop app* — chrome, a settings dialog, a theme, a self-updater. Games
+break some of those assumptions for real reasons. **Read
+[`game-repos.md`](https://github.com/gerp93/KVG_Standards/blob/main/game-repos.md)
+before auditing one**, so the same non-issues don't get re-flagged every pass.
+
+Summary of what differs:
+- **Theming** applies to a game's menu/launcher chrome, **not** its playfield
+  or HUD — colour that encodes game state is a legibility decision, not
+  drift. Don't flag hardcoded colours in render code; do flag a settings/menu
+  layer with its own duplicate palette.
+- **Save-game location** is the DB-location standard under another name. An
+  engine's per-user path (Godot's `user://`) satisfies it. Flag a hardcoded
+  relative path next to the executable; don't require a relocation UI.
+- **Update-check** depends on distribution: in scope for direct download, out
+  of scope for storefront distribution (Steam/itch app), same reasoning as
+  KVGauge. Record which one applies in `REPO_SCOPE.md`.
+- **Logo & branding** keeps the same surface checklist with engine-specific
+  wiring. A game with no art yet is a gap to note, not a reason to invent a
+  placeholder mark.
+- **Engine attribution** is an extra obligation with no analogue elsewhere: a
+  permissive engine (Godot is MIT) bundled into an exported build still needs
+  its copyright notice shipped, and the repo's AGPL-3.0 license does not
+  discharge that. Flag a released build with no engine attribution.
+- **Release/CI has no game-engine build variant yet** — that's a
+  new-tech-stack decision (below), not something to hand-roll in the game
+  repo. `game-repos.md` lists what the design has to handle.
+
 ## Licensing
 
 - Default license is **AGPL-3.0** for every active repo — copy an existing
@@ -160,6 +190,7 @@ First classify the repo — the shape of "release" differs by category:
 | Go library | `go.mod` at root, no `main` package meant to run standalone, other repos import it | `templates/cut-tag.yml` only — bare semver tag, no build |
 | Go web app | Has a `Dockerfile`, deployed via [gameshell-deploy](https://github.com/gerp93/gameshell-deploy) / DigitalOcean App Platform | `templates/ci.yml` (build+vet) only. **No** GitHub-Release-binary workflow — deploy happens on push via DO's own GitHub integration, not a release artifact. If one exists, it's vestigial; remove it. |
 | Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-streamdeck.yml` for a Stream Deck plugin) |
+| Game | Game engine project (`project.godot`, Unity/Unreal project files), ships a playable build | Wants both triggers like any desktop app, but **no game-engine `release-*.yml` variant exists yet** — see `game-repos.md`. New-tech-stack case: design + human approval before implementing, and don't hand-roll it in the game repo meanwhile. |
 | Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. This is the "New tech stacks" case above — ask the human before designing a new pattern. |
 
 Desktop GUI apps/plugins get **both** release triggers, not one or the

@@ -74,6 +74,19 @@ electron-builder self-publishes). Not retroactive — only releases cut after
 a repo picks up the updated workflow get it. See the `app-standards`
 skill's "Release notes" section.
 
+## Game repos
+
+Games are app repos, but several standards here assume a utility desktop app —
+chrome, a settings dialog, a theme, a self-updater. **[`game-repos.md`](game-repos.md)**
+says which standards apply unchanged, which change shape (theming applies to
+menu chrome but not the playfield; save-game location is the DB-location
+standard renamed; update-check depends on direct-download vs storefront), and
+the one obligation with no analogue elsewhere: a permissively-licensed engine
+bundled into an exported build still needs its copyright notice shipped.
+
+No game-engine `release-*.yml` variant exists yet — that's a new-tech-stack
+decision, and `game-repos.md` lists what the design has to handle.
+
 ## Per-repo TODO.md
 
 Every active app repo gets a `TODO.md` at its root (`templates/TODO.md`) —
@@ -90,6 +103,7 @@ its own backlog of future features and fixes, separate from
 | `release-flet.yml` | Flet desktop apps | kvgenius |
 | `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
 | `ci-go.yml` | Go build+vet gate (library or web app) | gameshell-framework, card-judge, timeline-trivia |
+| _(none yet)_ | Game-engine builds (Godot export) — needs designing, see [`game-repos.md`](game-repos.md) | airport |
 
 There's no `release-go-binary.yml`/similar for plain CLI-only Go apps in
 this catalog on purpose: `card-judge` and `timeline-trivia` are Go *web

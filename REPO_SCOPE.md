@@ -9,10 +9,14 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 10 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 11 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
-timeline-trivia). VisualAssault is the theme producer, not a consumer.
+timeline-trivia, airport). VisualAssault is the theme producer, not a consumer.
 kvgrep is excluded (no code yet).
+
+**airport is the first game repo** — see [`game-repos.md`](game-repos.md) for
+how these standards apply to games, since several of them assume a utility
+desktop app rather than a playable build.
 
 ## Scope matrix
 
@@ -28,6 +32,7 @@ kvgrep is excluded (no code yet).
 | gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
 | card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | TBD — web app, desktop icon surfaces don't apply but a README/site logo might | N/A — CI gate only, no release pipeline | N/A | TBD — unknown if it uses SQLite | Yes |
 | timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — same as card-judge | N/A | N/A | TBD — unknown if it uses SQLite | Yes |
+| airport | Game (Godot 4) | Menu chrome only — N/A today (no menus; playfield is art direction, see `game-repos.md`) | Yes | TBD — depends on direct-download vs storefront, undecided | Gap — no art assets exist yet | Yes, once a pipeline exists | Yes, once `auto-release.yml` exists | N/A — save uses Godot `user://`, not SQLite | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -128,6 +133,52 @@ release notes, VERSION_BUMP.md, TODO.md). Useful context, not current truth
   chrome/conventions? Update-check is already resolved as N/A (see gap
   matrix) — recommend treating theming the same way (out of scope) unless
   there's a specific reason to want it.
+
+### airport (Godot 4 game) — audited, first pass
+
+Audited against the standards fresh; this is current as of that pass, unlike
+the older sections above.
+
+Landed:
+- [x] `LICENSE` (AGPL-3.0), copied from KVG_Standards. Dependency check: the
+  game has no third-party dependencies, and Godot Engine itself is MIT
+  (permissive, no obstacle). Clean.
+- [x] `TODO.md` at root, seeded with the real backlog (art/scene-splitting,
+  runway direction and wind, de-icing, passenger satisfaction) and the open
+  balance questions.
+- [x] `CLAUDE.md` and `README.md` both state the repo follows KVG_Standards and
+  point at `game-repos.md`.
+- [x] Added to the scope matrix above.
+
+Not applicable, deliberately (see `game-repos.md`):
+- Theming — no menu chrome exists; the playfield and HUD are art direction, and
+  colour there encodes game state. Revisit if the game grows a settings/menu
+  layer, which *would* be in scope.
+- DB location — the save file uses Godot's `user://`, which is the platform's
+  per-user app-data directory, so it already satisfies the spirit of the
+  standard. Not SQLite.
+
+Open, needs a human decision:
+- [ ] **Release/CI — no game-engine build variant exists.** This is the
+  new-tech-stack case: a Godot `release-*.yml` needs designing and approving
+  here before anything is wired into the repo. `game-repos.md` lists what it
+  has to handle (engine + matching export templates, committed export presets
+  vs the current `.gitignore` exclusion, multi-platform artifacts, version
+  injection via `project.godot`). Until then the repo has no release pipeline,
+  and consequently no `VERSION_BUMP.md` either — correct, not drift.
+- [ ] **Update-check — scope undecided.** Applies if the game is distributed by
+  direct download; out of scope if it goes through a storefront. Decide the
+  distribution model first; the answer determines whether a missing updater is
+  a gap. Would need a Godot update-check package designed here either way.
+- [ ] **Logo & branding — real gap.** No `assets/logo.png`, no generation
+  script, no window or export icon. Needs an actual source mark from a human;
+  a placeholder was deliberately not invented. Godot wiring is
+  `config/icon` in `project.godot` plus the export preset's icon fields.
+- [ ] **Engine attribution not yet shipped.** Godot is MIT and an exported
+  build bundles it, so the build needs Godot's copyright notice
+  (`Engine.get_license_text()`) in a credits screen or alongside the artifact.
+  Nothing to fix in-repo today since there are no builds yet, but this must
+  land before the first release.
 
 ## Open questions (theming)
 

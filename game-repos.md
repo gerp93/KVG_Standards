@@ -121,11 +121,12 @@ What such a variant has to deal with, so the design isn't started from scratch:
   are a separate download and must match the engine version exactly), then
   `godot --headless --export-release <preset> <out>`.
 - **Export presets are repo config, not workflow input.** `export_presets.cfg`
-  defines the targets — and note this repo's `.gitignore` currently excludes
-  that file, which a game repo needs committed for CI to export at all. That
-  exclusion exists for repos where the file holds signing paths and secrets;
-  a game repo has to either commit a secret-free preset file or reconstruct it
-  in CI.
+  defines the targets, and CI cannot export without it. Note that **airport's
+  own `.gitignore` currently excludes it** (alongside `export.cfg`) — a sane
+  default, since that file can carry signing paths and keystore passwords, but
+  it means there is nothing for CI to build from today. The design has to pick
+  one: commit a secret-free preset file and keep signing material in Actions
+  secrets, or reconstruct the presets in CI.
 - **Multi-artifact releases.** One tag produces Windows/Mac/Linux builds,
   usually zipped per platform, unlike the single-binary variants.
 - **Version injection** has no `_version.py`/`package.json` equivalent —

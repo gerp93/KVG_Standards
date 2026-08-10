@@ -9,7 +9,7 @@ Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards)
 This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
 `update-check-versioning.md` / `licensing.md` / `db-location-versioning.md`
-/ `.github/workflows/` over anything cached here.
+/ `game-repos.md` / `.github/workflows/` over anything cached here.
 
 ## Docs must point back here
 
@@ -83,6 +83,9 @@ generalize it later" become permanent.
   isn't one of those, "vibe install" (see VisualAssault's README) is
   acceptable for prototypes but should not be treated as a real dependency
   in anything that gets a release pipeline.
+- Godot games are a deliberate exception, not a gap to flag yet: no
+  VisualAssault package exists for GDScript, so placeholder/no-theme is
+  expected for now — see `game-repos.md`.
 
 ## Logo & branding
 
@@ -160,6 +163,7 @@ First classify the repo — the shape of "release" differs by category:
 | Go library | `go.mod` at root, no `main` package meant to run standalone, other repos import it | `templates/cut-tag.yml` only — bare semver tag, no build |
 | Go web app | Has a `Dockerfile`, deployed via [gameshell-deploy](https://github.com/gerp93/gameshell-deploy) / DigitalOcean App Platform | `templates/ci.yml` (build+vet) only. **No** GitHub-Release-binary workflow — deploy happens on push via DO's own GitHub integration, not a release artifact. If one exists, it's vestigial; remove it. |
 | Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-streamdeck.yml` for a Stream Deck plugin) |
+| Godot game | GDScript project (no C#/.NET), ships a native desktop export end users download | Same as Desktop GUI app/plugin, calling `release-godot.yml` — see `game-repos.md` for the full breakdown (theming and icon generation are not yet covered for this category). |
 | Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. This is the "New tech stacks" case above — ask the human before designing a new pattern. |
 
 Desktop GUI apps/plugins get **both** release triggers, not one or the
@@ -215,6 +219,15 @@ Stream Deck plugin — see below).
     real `flet build` output — verify `_find_bundle_binary`'s layout
     assumptions before trusting it silently in a given app (see the
     package's README).
+  - Godot games: [`packages/godot/kvg_update`](https://github.com/gerp93/KVG_Standards/tree/main/packages/godot/kvg_update)
+    — **notify-only** (opens the release page, no self-replace; see the
+    package's doc comment for why). Godot has no dependency manager that
+    can pin a git ref, so unlike the packages above this one is
+    **vendored (copied)** into `addons/kvg_update/`, not declared as a
+    pinned dependency — refreshed via a per-repo
+    `scripts/update-kvg-update.sh` that stamps the source commit into a
+    header comment. See `game-repos.md` and `gerp93/airport`'s copy for
+    the reference version.
 - **Violation to flag:** a hand-rolled update-check/self-replace
   implementation instead of the shared package for that stack — this is
   exactly the kind of logic (GitHub Releases API polling, platform-specific

@@ -20,6 +20,13 @@ active app repo, plus historical per-repo audit findings.
   conventions, so a new app repo (or an audit of an existing one) picks
   them up automatically. See its `SKILL.md` for what it checks.
 
+## Games (Godot)
+
+Godot game repos are a distinct category from the desktop-GUI-app stacks
+below — release/CI and update-check are covered, theming and icon
+generation are not yet. See [`game-repos.md`](game-repos.md) for the full
+breakdown. Reference: [gerp93/airport](https://github.com/gerp93/airport).
+
 ## Theming
 
 Theme source of truth is [VisualAssault](https://github.com/gerp93/VisualAssault)
@@ -89,6 +96,7 @@ its own backlog of future features and fixes, separate from
 | `release-electron.yml` | Electron desktop apps | sweeper |
 | `release-flet.yml` | Flet desktop apps | kvgenius |
 | `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
+| `release-godot.yml` | Godot desktop games (GDScript only, no C#/.NET) | airport |
 | `ci-go.yml` | Go build+vet gate (library or web app) | gameshell-framework, card-judge, timeline-trivia |
 
 There's no `release-go-binary.yml`/similar for plain CLI-only Go apps in

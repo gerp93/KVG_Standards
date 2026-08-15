@@ -9,10 +9,10 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 11 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 12 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
-timeline-trivia, TrackDraft). VisualAssault is the theme producer, not a
-consumer. kvgrep is excluded (no code yet).
+timeline-trivia, TrackDraft, airport). VisualAssault is the theme producer,
+not a consumer. kvgrep is excluded (no code yet).
 
 ## Scope matrix
 
@@ -29,6 +29,7 @@ consumer. kvgrep is excluded (no code yet).
 | card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | TBD — only a favicon, no `assets/logo.png`; low priority per web-app category | N/A — CI gate only, no release pipeline | N/A | N/A — uses MariaDB (server-side), not SQLite | Yes |
 | timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
 | TrackDraft | Electron GUI | Yes | Yes | Yes | TBD — no `assets/logo.png` at all; `main.ts` references a nonexistent icon | Yes | Yes | Yes | Yes |
+| airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -306,6 +307,19 @@ mechanical fix found; items still needing a human decision are marked
   `assets/icon.png` for the window icon; no packaged-installer icon in
   `package.json`'s `build` config. Needs a real source mark before any
   icon plumbing can be added.
+
+### airport (Godot game)
+- [x] Release/CI: `auto-release.yml` + `cut-release.yml` both call
+  `release-godot.yml@main` correctly. `VERSION_BUMP.md` present.
+- [x] Update-check: `addons/kvg_update/kvg_update.gd` vendored via
+  `scripts/update-kvg-update.sh`, pin comment present. `LICENSE`
+  (AGPL-3.0), `TODO.md`, and docs linking back to KVG_Standards all
+  present.
+- [ ] Theming and icon generation are open gaps, not a violation — Godot
+  isn't covered for either yet (see `game-repos.md`). Prototype has no art
+  assets, so not currently blocking.
+- Audited 2026-08-10 following the `release-godot.yml`/
+  `packages/godot/kvg_update` addition on 2026-08-09.
 
 ## Open questions (theming)
 

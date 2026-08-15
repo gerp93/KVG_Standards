@@ -1,0 +1,157 @@
+name: Release (Godot)
+
+# Reusable build+release workflow for Godot desktop games (GDScript projects —
+# no C#/.NET). Modeled on release-go-gui.yml: one native export per OS on a
+# matching runner (Godot's export templates are version-locked to the editor,
+# so cross-exporting from a single host isn't worth the fragility). Callers
+# tag first (see templates/cut-release.yml), then call this with that tag.
+#
+# `--export-release` has implied `--import` since Godot 4.3 (godotengine/godot
+# PR #90431), so a fresh CI checkout with no `.godot` import cache exports
+# correctly without a separate import step. If a caller ever needs to support
+# a pre-4.3 godot_version, that will need to be added back.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3'
+        required: true
+        type: string
+      app_name:
+        description: 'Base name for the exported binary/package, e.g. Airport'
+        required: true
+        type: string
+      godot_version:
+        description: 'Godot version this project is authored in, e.g. 4.7.1 — must match exactly, export templates are version-locked'
+        required: true
+        type: string
+      project_dir:
+        description: 'Directory containing project.godot'
+        required: false
+        type: string
+        default: '.'
+      extra_stage_paths:
+        description: 'Space-separated extra files/dirs (relative to repo root) to copy alongside the export in the release package'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            platform: windows
+            preset: "Windows Desktop"
+            output: "${{ inputs.app_name }}.exe"
+          - os: ubuntu-latest
+            platform: linux
+            preset: "Linux"
+            output: "${{ inputs.app_name }}.x86_64"
+          - os: macos-latest
+            platform: macos
+            preset: "macOS"
+            output: "${{ inputs.app_name }}.app"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # What's committed is a dev placeholder (see project.godot); every real
+      # release build gets the actual tag baked in so the in-game update
+      # checker (addons/kvg_update) compares against its own true version.
+      - name: Stamp release version into project.godot
+        shell: bash
+        working-directory: ${{ inputs.project_dir }}
+        run: |
+          set -e
+          VERSION="${{ inputs.version }}"
+          VERSION="${VERSION#v}"
+          if ! grep -q '^config/version=' project.godot; then
+            echo "project.godot has no config/version= line to stamp" >&2
+            exit 1
+          fi
+          # perl -i, not sed -i: BSD sed (macOS) and GNU sed (linux/windows-git-bash)
+          # parse `-i "script"` differently — BSD treats the script as the backup
+          # suffix and chokes on the filename as if it were the script. perl -pi
+          # behaves identically across all three runner OSes.
+          perl -pi -e "s/^config\/version=.*/config\/version=\"$VERSION\"/" project.godot
+
+      - uses: chickensoft-games/setup-godot@v2
+        with:
+          version: ${{ inputs.godot_version }}
+          use-dotnet: false
+          include-templates: true
+
+      - name: Export build
+        shell: bash
+        working-directory: ${{ inputs.project_dir }}
+        run: |
+          set -e
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          godot --headless --export-release "${{ matrix.preset }}" "$GITHUB_WORKSPACE/out/${{ matrix.output }}"
+
+      - name: Stage release package
+        id: stage
+        shell: bash
+        run: |
+          set -e
+          STAGE="${{ inputs.app_name }}-${{ inputs.version }}-${{ matrix.platform }}"
+          mkdir -p "$STAGE"
+          cp -r "out/${{ matrix.output }}" "$STAGE/"
+
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            chmod +x "$STAGE/${{ matrix.output }}/Contents/MacOS/"* || true
+          elif [ "${{ matrix.platform }}" = "linux" ]; then
+            chmod +x "$STAGE/${{ matrix.output }}"
+          fi
+
+          if [ -n "${{ inputs.extra_stage_paths }}" ]; then
+            cp -r ${{ inputs.extra_stage_paths }} "$STAGE/"
+          fi
+
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            7z a -tzip "${STAGE}.zip" "$STAGE" > /dev/null
+            echo "ASSET_PATH=${STAGE}.zip" >> "$GITHUB_ENV"
+          else
+            tar czf "${STAGE}.tar.gz" "$STAGE"
+            echo "ASSET_PATH=${STAGE}.tar.gz" >> "$GITHUB_ENV"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: package-${{ matrix.platform }}
+          path: ${{ env.ASSET_PATH }}
+
+  release:
+    needs: build
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: package-*
+          merge-multiple: true
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            ## Installing
+
+            Download the archive for your platform below, extract it, and run the app inside — no installer needed:
+
+            - **Windows** — `${{ inputs.app_name }}-${{ inputs.version }}-windows.zip` → run the `.exe`
+            - **macOS** — `${{ inputs.app_name }}-${{ inputs.version }}-macos.tar.gz` → open the `.app`
+            - **Linux** — `${{ inputs.app_name }}-${{ inputs.version }}-linux.tar.gz` → run the extracted binary (`chmod +x` it first)
+
+            These builds are unsigned, so Windows SmartScreen and macOS Gatekeeper will warn about an unrecognized publisher — click through to launch it (right-click → "Open" on macOS the first time).

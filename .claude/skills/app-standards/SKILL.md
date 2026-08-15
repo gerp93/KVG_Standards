@@ -74,11 +74,13 @@ generalize it later" become permanent.
   There should be exactly one theme dependency per repo, pinned to a tag.
 - **Violation to flag:** a dependency on `@main` instead of `@vX.Y.Z`.
 - **Violation to flag:** a dependency on anything other than VisualAssault
-  for theming (e.g. the old `KVG_Themes`/`KVG_Themes_Flet`/`KVG_RGB` repos,
-  or a hand-rolled theme file/struct that duplicates VisualAssault's
-  palette instead of importing its package). Hand-copied palettes drift
-  silently from the source of truth — flag even if the colors currently
-  match.
+  for theming (e.g. the old `KVG_Themes`/`KVG_Themes_Flet` repos, or a
+  hand-rolled theme file/struct that duplicates VisualAssault's palette
+  instead of importing its package). Hand-copied palettes drift silently
+  from the source of truth — flag even if the colors currently match.
+  (`KVG_RGB` is not one of these — despite the name, it's an unrelated
+  OpenRGB lighting-device controller, not a theme package. It's a normal
+  VisualAssault CSS *consumer*, tracked like any other app repo.)
 - Packages exist for CSS, Tkinter, Flet, and Angular. If a repo's stack
   isn't one of those, "vibe install" (see VisualAssault's README) is
   acceptable for prototypes but should not be treated as a real dependency

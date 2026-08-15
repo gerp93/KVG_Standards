@@ -9,10 +9,10 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 12 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 13 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
-timeline-trivia, TrackDraft, airport). VisualAssault is the theme producer,
-not a consumer. kvgrep is excluded (no code yet).
+timeline-trivia, TrackDraft, airport, KVG_RGB). VisualAssault is the theme
+producer, not a consumer. kvgrep is excluded (no code yet).
 
 ## Scope matrix
 
@@ -30,6 +30,7 @@ not a consumer. kvgrep is excluded (no code yet).
 | timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
 | TrackDraft | Electron GUI | Yes | Yes | Yes | TBD — no `assets/logo.png` at all; `main.ts` references a nonexistent icon | Yes | Yes | Yes | Yes |
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
+| KVG_RGB | Python CLI + Flask web app — no existing category match, see below | No — hand-rolled CSS palette, not VisualAssault | TBD — declares MIT in `pyproject.toml`, no `LICENSE` file; needs reconciliation against the AGPL-3.0 default | No — no update-check wired at all | No — no logo/icon assets anywhere | N/A — no CI/release pipeline exists (no `.github/workflows`) | No — missing | No — SQLite at a hardcoded path, no relocate/adopt/reset UI | Partial — has a `TODO.md`, predates and doesn't follow the KVG_Standards format |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -321,6 +322,38 @@ mechanical fix found; items still needing a human decision are marked
 - Audited 2026-08-10 following the `release-godot.yml`/
   `packages/godot/kvg_update` addition on 2026-08-09.
 
+### KVG_RGB
+- **Not previously tracked in this file** — added to scope 2026-08-15 after
+  the `app-standards` skill was found to mischaracterize it (see open
+  question below). It's a real, separate app: an OpenRGB device controller
+  (Python CLI + Flask web UI + Windows installer/exe), unrelated to
+  VisualAssault/UI theming despite the name.
+- Audited 2026-08-15 (repo inspection only, no fixes applied — none of this
+  repo's gaps have a clean mechanical fix given the open category/pipeline
+  question below):
+  - Theming: `kvg_rgb/static/style.css` is a hand-rolled dark palette
+    (`--primary-color: #6366f1` etc.), not VisualAssault.
+  - Licensing: `pyproject.toml` declares `license = {text = "MIT"}` but
+    there's no `LICENSE` file in the repo at all. Every other repo defaults
+    to AGPL-3.0; reconciling this needs the dependency check `licensing.md`
+    describes (starting with `openrgb-python`) before picking a license.
+  - Update-check: none. Distribution is a hand-rolled `installer.py` /
+    `build_installer.py` / `release.py`, not `kvg_updater` or a KVG_Standards
+    release workflow.
+  - Release/CI: no `.github/workflows` directory exists — no CI, no
+    automated release, nothing to compare against `templates/`.
+  - Logo & branding: no `assets/logo` or icon anywhere.
+  - VERSION_BUMP.md: missing. Version is hardcoded in
+    `kvg_rgb/__init__.py` (`__version__ = "0.1.2"`).
+  - DB location: SQLite, but hardcoded to `~/.kvg_rgb/rgb_controller.db`
+    (`kvg_rgb/paths.py`) — no relocate/adopt/reset UI like Sweeper's
+    reference pattern.
+  - TODO.md: exists, but predates this repo's addition to scope and doesn't
+    follow the KVG_Standards TODO.md template.
+  - Repo has had no commits since 2025-10-18 (~10 months) — worth
+    confirming with the human whether this is active or dormant before
+    investing in bringing it into compliance.
+
 ## Open questions (theming)
 
 1. Should the CSS re-vendor script (`gameshell-framework/scripts/update-visual-assault-css.sh`)
@@ -328,3 +361,24 @@ mechanical fix found; items still needing a human decision are marked
    target file path as an argument) instead of living per-repo? Sweeper and
    gameshell-deploy's `gui/frontend` would both want it too.
 2. KVGauge theming scope decision (see above).
+
+## Open questions (KVG_RGB)
+
+1. **The `app-standards` skill mischaracterizes this repo.** It lists
+   `KVG_RGB` alongside `KVG_Themes`/`KVG_Themes_Flet` as an old,
+   superseded *theme* dependency to flag as a violation. That's wrong —
+   KVG_RGB is an OpenRGB lighting-device controller with no relationship to
+   UI theming; the name is a coincidence (RGB lighting hardware, not
+   red/green/blue theme colors). This should be corrected so future audits
+   don't misfile it.
+2. **No pipeline category fits.** Existing categories are native GUI
+   (Python/PyInstaller, Flet, Electron, Wails) or a Go web app inheriting
+   gameshell-framework's CSS. KVG_RGB is a CLI + Flask web UI packaged as a
+   Windows installer/exe — closest to the Python/PyInstaller shape for
+   packaging, but has a web UI like the Go web apps for theming. Per
+   `CLAUDE.md`'s "New tech stacks" process, this needs a designed standard
+   (which release/CI template applies, whether the Flask UI adopts
+   VisualAssault's CSS package the way card-judge/timeline-trivia do)
+   before any of the gaps above get mechanically fixed.
+3. Confirm repo is still active (no commits since 2025-10-18) before
+   prioritizing compliance work here.

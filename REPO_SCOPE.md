@@ -9,11 +9,11 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 14 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 15 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
-timeline-trivia, TrackDraft, airport, KVG_RGB, radbot). VisualAssault is the
-theme producer, not a consumer. kvgrep and Valutique are excluded (no code
-yet).
+timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate).
+VisualAssault is the theme producer, not a consumer. kvgrep and Valutique
+are excluded (no code yet).
 
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
@@ -38,6 +38,7 @@ That check has been skipped every run since; a human (or a session with
 | card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | TBD — only a favicon, no `assets/logo.png`; low priority per web-app category | N/A — CI gate only, no release pipeline | N/A | N/A — uses MariaDB (server-side), not SQLite | Yes |
 | timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
 | TrackDraft | Electron GUI | Yes | Yes | Yes | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
+| RolePlaymate | Electron GUI | Yes | Yes | Yes | TBD — no `assets/logo.png` at all; the in-app logo `<img>` tags degrade gracefully (hidden on load failure) rather than showing a broken image or a fabricated placeholder | Yes | Yes | Yes | Yes |
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
 | radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | TBD | TBD | TBD | N/A | No |
@@ -358,6 +359,40 @@ mechanical fix found; items still needing a human decision are marked
   installer, plus `assets/logo.png`/`public/logo.png` for in-app branding
   and a checked-in `scripts/generate-icons.js`. Logo & branding is now
   fully compliant — no outstanding human decision here.
+
+### RolePlaymate
+- **New repo, built 2026-08-17.** A character-writing notepad for AI chatbot
+  characters — name/portrait plus three independently versioned fields
+  (personality, scenario, opening greeting), each with its own version
+  history, active-version marker, and word-level diff view. Directly modeled
+  on TrackDraft's Song/Part/PartVersion split (Character↔Song,
+  CharacterField↔Part, CharacterFieldVersion↔PartVersion), same Electron GUI
+  category as TrackDraft/Sweeper — built by porting TrackDraft's own
+  main-process/IPC/schema shape rather than inventing a new pattern.
+- First implementation attempt was a Next.js/Prisma web app, built before
+  this repo (or TrackDraft) was known to the building session — caught and
+  corrected before merge once the human clarified "similar to TrackDraft"
+  meant the actual `gerp93/TrackDraft` repo, not a generic reference. Worth
+  a mention here in case the git history looks like a hard pivot: it is one,
+  intentionally.
+- [x] Compliant on: theming (VisualAssault CSS vendored & pinned `@v0.2.0`
+  via `scripts/update-visual-assault-css.sh`), licensing (AGPL-3.0, all deps
+  MIT/BSD-3/Apache-2.0 — no `@anthropic-ai/sdk` dependency at all since this
+  app doesn't use AI, so its dependency tree is a strict subset of
+  TrackDraft's already-clean one), release/CI (`auto-release.yml` +
+  `cut-release.yml` → `release-electron.yml@main`), update-check
+  (`electron-updater` directly), DB location (`src/main/dbLocation.ts` +
+  `Settings.tsx`, same relocate/adopt/reset shape as TrackDraft/Sweeper),
+  `TODO.md`, `VERSION_BUMP.md`, `CLAUDE.md`/`README.md` both state the repo
+  follows KVG_Standards.
+- [ ] **Needs a human decision**: logo & branding entirely absent — no
+  `assets/logo.png` exists yet. `scripts/generate-icons.js` is wired
+  (verbatim copy of TrackDraft's sharp-based generator) but inert until a
+  real source mark is supplied; deliberately not fabricated. Unlike
+  TrackDraft, the in-app logo `<img>` tags have an `onError` handler that
+  hides them rather than showing a broken image, so the app looks clean in
+  the meantime — but the packaged-binary icon and window/taskbar icon are
+  still unset.
 
 ### airport (Godot game)
 - [x] Release/CI: `auto-release.yml` + `cut-release.yml` both call

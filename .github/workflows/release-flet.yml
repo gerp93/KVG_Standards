@@ -69,8 +69,18 @@ jobs:
           # flet build takes the app DIRECTORY as its positional arg (default
           # "."), not an entry-point filename — the entry module (without
           # .py) is named via --module-name, defaulting to "main" otherwise.
+          #
+          # --yes: flet build's own Flutter-SDK-detection step interactively
+          # prompts ("Flutter SDK not found... Proceed? [y/n]") and installs
+          # Flutter itself on confirmation — there's no separate flutter-action
+          # setup step in this job. Without --yes that prompt just hangs/fails
+          # in this non-interactive CI shell.
+          # --no-rich-output: on windows-latest runners, rich's styled output
+          # (used to render that same prompt) hits a UnicodeEncodeError against
+          # the legacy cp1252 console codec on an emoji/bullet character,
+          # crashing the build before Flutter even installs.
           MODULE_NAME="${ENTRY_POINT%.py}"
-          flet build ${{ matrix.platform }} --project "${{ inputs.app_name }}" --module-name "$MODULE_NAME"
+          flet build ${{ matrix.platform }} --project "${{ inputs.app_name }}" --module-name "$MODULE_NAME" --yes --no-rich-output
         env:
           ENTRY_POINT: ${{ inputs.entry_point }}
 

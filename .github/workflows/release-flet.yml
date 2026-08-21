@@ -106,7 +106,18 @@ jobs:
         run: |
           set -e
           STAGE="${{ inputs.app_name }}-${{ inputs.version }}-${{ matrix.platform }}"
-          OUT_DIR=$(find build -maxdepth 1 -mindepth 1 -type d | head -n 1)
+          # flet build reports "Find it in build/<platform> directory" on
+          # success, but also leaves its own intermediate scratch dirs
+          # (icons, package, template-1, template-2, ...) as siblings under
+          # build/. Those sort before most platform names, so grabbing the
+          # first subdirectory of build/ silently staged a scratch folder
+          # instead of the app — target the platform dir explicitly.
+          OUT_DIR="build/${{ matrix.platform }}"
+          if [ ! -d "$OUT_DIR" ]; then
+            echo "::error::Expected build output directory '$OUT_DIR' not found. Contents of build/:" >&2
+            ls -la build >&2
+            exit 1
+          fi
           mkdir -p "$STAGE"
           cp -r "$OUT_DIR"/. "$STAGE/"
 

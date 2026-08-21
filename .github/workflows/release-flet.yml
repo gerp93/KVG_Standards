@@ -62,6 +62,12 @@ jobs:
         shell: bash
         run: echo "__version__ = \"${{ inputs.version }}\"" | sed 's/^v//' > "${{ inputs.version_file }}"
 
+      - name: Install Linux build dependencies
+        if: matrix.platform == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev ninja-build
+
       - name: Build with Flet
         shell: bash
         run: |
@@ -79,8 +85,19 @@ jobs:
           # (used to render that same prompt) hits a UnicodeEncodeError against
           # the legacy cp1252 console codec on an emoji/bullet character,
           # crashing the build before Flutter even installs.
+          # --cleanup-package-files (macOS only): pystray drags in pyobjc-core,
+          # whose wheel bundles its own PyObjCTest fixtures — precompiled .so
+          # files with .dSYM bundles that newer Xcode's `strip` can't parse
+          # ("string table not at the end of the file"), failing the whole
+          # macOS build. Nothing in this app imports PyObjCTest, so drop it
+          # (and any stray dSYMs) from the bundled site-packages before Xcode
+          # gets a chance to strip them.
           MODULE_NAME="${ENTRY_POINT%.py}"
-          flet build ${{ matrix.platform }} --project "${{ inputs.app_name }}" --module-name "$MODULE_NAME" --yes --no-rich-output
+          EXTRA_ARGS=()
+          if [ "${{ matrix.platform }}" = "macos" ]; then
+            EXTRA_ARGS=(--cleanup-package-files "**/PyObjCTest*" "**/*.dSYM")
+          fi
+          flet build ${{ matrix.platform }} --project "${{ inputs.app_name }}" --module-name "$MODULE_NAME" --yes --no-rich-output "${EXTRA_ARGS[@]}"
         env:
           ENTRY_POINT: ${{ inputs.entry_point }}
 

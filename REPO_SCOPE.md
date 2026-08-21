@@ -9,10 +9,19 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 14 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 15 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
-timeline-trivia, TrackDraft, airport, KVG_RGB, RolePlaymate). VisualAssault
-is the theme producer, not a consumer. kvgrep is excluded (no code yet).
+timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate).
+VisualAssault is the theme producer, not a consumer. kvgrep and Valutique
+are excluded (no code yet).
+
+**Tooling note (2026-08-17):** the scheduled audit that maintains this file
+checks each repo's "Automatically delete head branches" setting as part of
+its sweep, but has no GitHub tool available to it that reads or writes
+repository settings (only file/PR/commit operations) — only `gh api`/
+`gh repo edit` can do that, and this session doesn't have `gh` CLI access.
+That check has been skipped every run since; a human (or a session with
+`gh` access) needs to verify it directly until a suitable tool is added.
 
 ## Scope matrix
 
@@ -28,10 +37,11 @@ is the theme producer, not a consumer. kvgrep is excluded (no code yet).
 | gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
 | card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | TBD — only a favicon, no `assets/logo.png`; low priority per web-app category | N/A — CI gate only, no release pipeline | N/A | N/A — uses MariaDB (server-side), not SQLite | Yes |
 | timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
-| TrackDraft | Electron GUI | Yes | Yes | Yes | TBD — no `assets/logo.png` at all; `main.ts` references a nonexistent icon | Yes | Yes | Yes | Yes |
+| TrackDraft | Electron GUI | Yes | Yes | Yes | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
 | RolePlaymate | Electron GUI | Yes | Yes | Yes | TBD — no `assets/logo.png` at all; the in-app logo `<img>` tags degrade gracefully (hidden on load failure) rather than showing a broken image or a fabricated placeholder | Yes | Yes | Yes | Yes |
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
-| KVG_RGB | Python CLI + Flask web app — no existing category match, see below | No — hand-rolled CSS palette, not VisualAssault | TBD — declares MIT in `pyproject.toml`, no `LICENSE` file; needs reconciliation against the AGPL-3.0 default | No — no update-check wired at all | No — no logo/icon assets anywhere | N/A — no CI/release pipeline exists (no `.github/workflows`) | No — missing | No — SQLite at a hardcoded path, no relocate/adopt/reset UI | Partial — has a `TODO.md`, predates and doesn't follow the KVG_Standards format |
+| KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
+| radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | TBD | TBD | TBD | N/A | No |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -85,6 +95,11 @@ mechanical fix found; items still needing a human decision are marked
     passed to `release-python-gui.yml` in either workflow. Needs a real
     source mark designed before the KVGrainy-style icon plumbing can be
     wired in.
+- **2026-08-17 re-audit**: [PR #6](https://github.com/gerp93/KVGroove/pull/6)
+  merged, but it turned out to be docs-only (`TODO.md`/`VERSION_BUMP.md`/
+  README pointer) — the logo & branding gap above is untouched and still
+  needs the same human decision. Everything else (theming pinned `@v0.2.0`,
+  licensing, update-check wiring) re-checked, still compliant.
 
 ### gameshell-deploy (Wails GUI)
 - [x] Added `github.com/gerp93/KVG_Standards/packages/go/kvgupdate` (pinned
@@ -106,17 +121,23 @@ mechanical fix found; items still needing a human decision are marked
   re-vendor script for `gui/frontend/src/themes.css` (values were already
   byte-identical to VisualAssault `@v0.2.0`, now formally vendored/pinned)
   — same PR #13.
-- [ ] Add `LICENSE` (AGPL-3.0) — no license file exists yet. Deps (Wails, Go
-  modules, npm frontend deps) checked, all MIT/BSD, no blocker. PR still
-  open: [gameshell-deploy #12](https://github.com/gerp93/gameshell-deploy/pull/12)
-  (confirmed open as of the 2026-08-07 re-audit; not duplicated).
+- [x] Added `LICENSE` (AGPL-3.0) — [gameshell-deploy #12](https://github.com/gerp93/gameshell-deploy/pull/12),
+  merged 2026-08-14.
 - [x] **2026-08-07 re-audit**, same PR #13: added missing `TODO.md`/
   `VERSION_BUMP.md`; added a README "Standards" section (previously no
   mention of KVG_Standards anywhere); fixed stale docs (`CLAUDE.md`
   described releases as manual-only, predating `auto-release.yml`;
   `gui/README.md` referenced a since-removed `release.yml`).
 - [ ] **Needs a human decision**: logo & branding — no `assets/logo.png` or
-  any icon surface wired at all. Needs a real source mark, not fabricated.
+  any icon surface wired at all.
+- **2026-08-17 re-audit**: LICENSE gap above confirmed resolved (merged
+  same day as PR #13). Logo/branding still open, unchanged. Noted for a
+  human: `gui/go.mod` now pins `kvgupdate` to a Go pseudo-version off a
+  commit hash rather than `@main` or a tag — functionally fine (still an
+  interim pin), just a different shape than other repos' `@main` pins.
+  Also still true: the repo's default branch remains
+  `migration/control-plane-scripts` rather than `main`, unusual this long
+  after the stated migration. Needs a real source mark, not fabricated.
 
 ### Sweeper
 - [x] Re-vendored `src/renderer/themes.css` from VisualAssault
@@ -208,6 +229,9 @@ mechanical fix found; items still needing a human decision are marked
     by `desktop_app.py`'s own local versions. This is how the update-check
     bug above went unnoticed. Worth deciding whether to delete or
     consolidate.
+- **2026-08-17 re-audit**: only new commit was a test-only PR (214 unit
+  tests added, no other files touched). Logo/branding gap and the dead-code
+  duplicate tabs above are both unchanged.
 
 ### KVGauge (Stream Deck plugin)
 - [ ] **Needs a decision, not just an implementation** on theming: does a
@@ -229,6 +253,11 @@ mechanical fix found; items still needing a human decision are marked
   convention, not the generic desktop checklist. Fixed: `TODO.md` and
   `VERSION_BUMP.md` were both missing despite the matrix saying "Yes";
   README never mentioned KVG_Standards.
+- **2026-08-17 re-audit**: TODO.md/VERSION_BUMP.md/README pointer confirmed
+  still present. The theming decision above is still open —
+  `propertyinspector.html` is unchanged, still the same hand-rolled dark
+  palette, no VisualAssault reference anywhere in the repo. Nobody has
+  picked "adopt" or "formally out of scope" yet.
 
 ### timeline-trivia
 - [x] Compliance audit (2026-08-07): CI (`ci-go.yml@main`, `working_directory: src`)
@@ -246,6 +275,10 @@ mechanical fix found; items still needing a human decision are marked
   [PR #3](https://github.com/gerp93/timeline-trivia/pull/3) (draft).
   Logo/branding gap noted in the matrix above but left as-is (low
   priority per web-app category, no fix implemented).
+- **2026-08-17 re-audit**: recent commit was a scroll/timer UI bugfix, no
+  standards-relevant files touched. LICENSE, theming inheritance, and the
+  TODO.md/KVG_Standards pointer from PR #3 (merged, not draft) all still
+  intact.
 
 ### card-judge
 - Fork status checked: GitHub lists it as a fork of `GrantFBarnes/card-judge`
@@ -271,6 +304,21 @@ mechanical fix found; items still needing a human decision are marked
   `CLAUDE.md` line both reference a `release.yml` that doesn't exist in
   this repo — didn't want to blind-delete something possibly still
   referenced externally; needs a human look.
+- **2026-08-17 re-audit**: `main` (`adca1ac...`) is still well behind
+  `f-framework-breakout` (`ff356af...`, the branch that got the recent
+  `gameshell-framework` v0.18.0 bump) — [PR #12](https://github.com/gerp93/card-judge/pull/12)
+  (the framework-breakout → main merge) is still open, so is
+  [PR #14](https://github.com/gerp93/card-judge/pull/14) (draft, targets
+  `f-framework-breakout`, adds the `TODO.md`/KVG_Standards pointers from
+  the 2026-08-07 audit) — that's why a fresh clone of `f-framework-breakout`
+  today still shows no `TODO.md`: the fix exists, it's just sitting in an
+  unmerged draft, not a regression. v0.18.0 pinned cleanly in `src/go.mod`
+  with no leftover `replace` directive. New, unrelated bug spotted (not a
+  standards item, not fixed): `src/static/html/pages/body/stats.html:4`
+  links `/static/css/home.css`, which doesn't exist — `home.html:4` uses
+  `/gs/css/home.css` instead, suggests a copy-paste slip. Also:
+  `CLAUDE.md`'s "Gameshell Framework split (in progress)" section is now
+  stale post-tag and could use a rewrite once #12 lands.
 
 ### gameshell-framework
 - [x] **2026-08-07 audit** — [PR #4](https://github.com/gerp93/gameshell-framework/pull/4)
@@ -304,11 +352,13 @@ mechanical fix found; items still needing a human decision are marked
 - [x] Fixed — [PR #1](https://github.com/gerp93/TrackDraft/pull/1) (draft):
   added a `CLAUDE.md` "Standards" section (repo had zero docs mentioning
   KVG_Standards); added missing `TODO.md` and `VERSION_BUMP.md`.
-- [ ] **Needs a human decision**: logo & branding entirely absent — no
-  `assets/logo.png` exists; `main.ts` references a nonexistent
-  `assets/icon.png` for the window icon; no packaged-installer icon in
-  `package.json`'s `build` config. Needs a real source mark before any
-  icon plumbing can be added.
+- [x] **Resolved 2026-08-15** ("fix/logo-relative-paths" PR): real assets
+  landed, not just a path fix — `assets/icon.png` (256×256) wired into
+  `src/main/main.ts:51`'s window icon, `build/icon.png` (1024×1024) wired
+  into `package.json:52`'s electron-builder `icon` for the packaged
+  installer, plus `assets/logo.png`/`public/logo.png` for in-app branding
+  and a checked-in `scripts/generate-icons.js`. Logo & branding is now
+  fully compliant — no outstanding human decision here.
 
 ### RolePlaymate
 - **New repo, built 2026-08-17.** A character-writing notepad for AI chatbot
@@ -356,6 +406,17 @@ mechanical fix found; items still needing a human decision are marked
   assets, so not currently blocking.
 - Audited 2026-08-10 following the `release-godot.yml`/
   `packages/godot/kvg_update` addition on 2026-08-09.
+- **2026-08-17 re-audit**: the `iso3d-mvp` merge (2026-08-15) added 12
+  procedurally-generated `.glb` meshes (control tower, terminal, stands,
+  taxiway pieces, aircraft), all flat-material/untextured, rendered
+  isometrically via `Render3D.gd`. Not a standards violation — Godot
+  theming/icon-gen still isn't covered — but the "no art assets yet"
+  half of that exception's reasoning no longer holds; worth a human
+  revisiting whether Godot theming needs scoping now that a real repo has
+  shipped visuals. Fixed the README's now-stale "placeholder shapes only"/
+  "no sprites" claims — [airport #3](https://github.com/gerp93/airport/pull/3)
+  (draft, docs-only). Release/CI, update-check, LICENSE, TODO.md,
+  VERSION_BUMP.md all re-confirmed intact.
 
 ### KVG_RGB
 - **Not previously tracked in this file** — added to scope 2026-08-15 after
@@ -388,6 +449,76 @@ mechanical fix found; items still needing a human decision are marked
   - Repo has had no commits since 2025-10-18 (~10 months) — worth
     confirming with the human whether this is active or dormant before
     investing in bringing it into compliance.
+- **2026-08-17 re-audit — the repo answered its own dormancy and category
+  questions.** The `pywebview-desktop-app` merge (2026-08-15, the day after
+  the audit above) turned out to be "native desktop window (pywebview) +
+  KVG_Standards compliance" bundled together, self-resolving most of the
+  gaps just listed:
+  - Theming: `kvg_rgb/static/vendor/visual-assault-themes.css` now vendored
+    and linked in `templates/index.html`; `style.css`'s custom properties
+    now alias VisualAssault's `--color-*` tokens; a
+    `scripts/update-visual-assault-css.py` re-vendor script was added.
+  - Licensing: `LICENSE` (AGPL-3.0) added at repo root; `pyproject.toml`
+    now declares `license = {text = "AGPL-3.0-or-later"}` (was `MIT`).
+  - Update-check: `kvg_rgb/updater.py` now wraps `kvg-updater` (pinned
+    `@main`, the standard interim exception).
+  - Release/CI: `.github/workflows/auto-release.yml` and `cut-release.yml`
+    added, calling `gerp93/KVG_Standards/.github/workflows/release-python-gui.yml@main`
+    with `entry_point: kvg_rgb/gui.py`, `windowed: true` — same reusable
+    workflow KVGrainy/KVGroove/KVG_Converter use.
+  - `VERSION_BUMP.md` added.
+  - DB location: `kvg_rgb/paths.py` now goes through `kvg_dblocation` for
+    relocate/adopt/reset, replacing the old hardcoded path.
+  - Still open: logo & branding — no icon/logo assets anywhere yet.
+  - **What actually changed**: `kvg_rgb/gui.py` now `import webview`s,
+    starts the existing Flask app (`kvg_rgb/web.py`'s `create_app()`) on a
+    background thread against a local port, and opens it in a native
+    `webview.create_window()` instead of a browser tab. Flask isn't
+    replaced, just demoted to an embedded content layer; `web` mode
+    remains as a browser-tab fallback CLI subcommand. `requirements.txt`
+    now pins `pywebview>=5.0`, `requirements-dev.txt` pins
+    `pyinstaller>=6.0.0`.
+  - Repo is confirmed active (this was the first commit since 2025-10-18,
+    and it's a substantial one) — dormancy question #3 below is answered.
+
+### radbot
+- **New repo, discovered 2026-08-17** (created 2026-08-13). Agentic control
+  stack for a retrofitted Toymax RAD 1.0 robot — a Raspberry Pi + Pi Pico
+  hardware project: Python control/deliberation code (Claude-driven
+  planning, a reflex layer, a skills layer) validated against a simulator,
+  meant to later run on the physical robot. Has its own `pyproject.toml`
+  (hatchling build, `uv`-based), a `.github/workflows/ci.yml` (test +
+  scenario-eval gates, no release pipeline), and a substantial `README.md`/
+  test suite (314 tests per the README).
+- Housekeeping, not a standards item: the repo's initial commit carried a
+  leftover `HOLDING_BRANCH.md` — a note from whichever session first built
+  this that explained it was parked on a KVG_Standards holding branch
+  before being moved to its own repo, and said to delete the note once
+  that happened. The move had already happened (this repo's `main` has the
+  code; the holding branch in KVG_Standards is gone) but the note itself
+  was never deleted. Removed directly, no PR needed for a file whose own
+  content told us to remove it.
+- **No pipeline category fits, per `CLAUDE.md`'s "New tech stacks" process
+  — needs a human decision before any gaps get filled.** Existing
+  categories are all either a shipped GUI app (Python/PyInstaller, Flet,
+  Electron, Wails), a Go web app, or a library. radbot is none of those: no
+  GUI, no web server, and — unlike a library — it does have a real runtime
+  surface (a CLI that drives actual hardware). Its `ci.yml` is entirely
+  self-contained (no KVG_Standards reusable workflow calls), and it has no
+  LICENSE file, no TODO.md, no VERSION_BUMP.md, no logo/branding, and no
+  update-check — but none of those are being called out as violations yet,
+  because there's no approved standard for this shape of repo to violate.
+  Per `CLAUDE.md`: design the standard (does a headless Pi-deployed Python
+  project need a release/CI workflow at all, or just CI gates as it has
+  now? does licensing/AGPL-3.0 apply the same way? is there a "no update-
+  check, deployed by hand to the robot" precedent like KVGauge's N/A?),
+  get it approved, then wire it in — not something to paper over locally
+  or mechanically fix in this pass.
+- One thing worth a human's attention independent of the above:
+  `pyproject.toml`'s `sim` extra pins `httpx2>=0.28` alongside `fastapi`/
+  `uvicorn` — `httpx2` is an unusual package name next to those (`fastapi`/
+  `uvicorn` typically pull in plain `httpx`); worth confirming that's
+  intentional and not a typo before it ships.
 
 ## Open questions (theming)
 
@@ -399,21 +530,22 @@ mechanical fix found; items still needing a human decision are marked
 
 ## Open questions (KVG_RGB)
 
-1. **The `app-standards` skill mischaracterizes this repo.** It lists
-   `KVG_RGB` alongside `KVG_Themes`/`KVG_Themes_Flet` as an old,
-   superseded *theme* dependency to flag as a violation. That's wrong —
-   KVG_RGB is an OpenRGB lighting-device controller with no relationship to
-   UI theming; the name is a coincidence (RGB lighting hardware, not
-   red/green/blue theme colors). This should be corrected so future audits
-   don't misfile it.
-2. **No pipeline category fits.** Existing categories are native GUI
-   (Python/PyInstaller, Flet, Electron, Wails) or a Go web app inheriting
-   gameshell-framework's CSS. KVG_RGB is a CLI + Flask web UI packaged as a
-   Windows installer/exe — closest to the Python/PyInstaller shape for
-   packaging, but has a web UI like the Go web apps for theming. Per
-   `CLAUDE.md`'s "New tech stacks" process, this needs a designed standard
-   (which release/CI template applies, whether the Flask UI adopts
-   VisualAssault's CSS package the way card-judge/timeline-trivia do)
-   before any of the gaps above get mechanically fixed.
-3. Confirm repo is still active (no commits since 2025-10-18) before
-   prioritizing compliance work here.
+1. **Resolved 2026-08-15** — [KVG_Standards #8](https://github.com/gerp93/KVG_Standards/pull/8)
+   corrected the `app-standards` skill's mischaracterization of KVG_RGB as
+   a superseded theme dependency; it's now documented as the unrelated
+   OpenRGB lighting-device controller it actually is.
+2. **Effectively resolved by the repo itself, needs a human sign-off to
+   close formally.** The `pywebview-desktop-app` merge (2026-08-15, see the
+   2026-08-17 re-audit above) turned KVG_RGB into a native-windowed desktop
+   app (pywebview + PyInstaller, entry point `kvg_rgb/gui.py`) with Flask
+   demoted to an embedded content layer — and wired it to
+   `release-python-gui.yml`, the same reusable workflow the other
+   Python/PyInstaller GUI repos use. Per `CLAUDE.md`'s "New tech stacks"
+   process, a human still needs to explicitly approve reclassifying
+   KVG_RGB's category from "no pipeline fits" to Python/PyInstaller GUI —
+   but there's no longer a real design gap blocking it; the shape already
+   matches the existing category's conventions. Once approved, the scope
+   matrix's Category cell above should drop the "see below" hedge.
+3. **Resolved.** Repo is confirmed active — the pywebview merge was a
+   substantial commit landing the day after the prior audit flagged the
+   ~10-month gap.

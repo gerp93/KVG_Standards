@@ -280,6 +280,29 @@ mechanical fix found; items still needing a human decision are marked
   standards-relevant files touched. LICENSE, theming inheritance, and the
   TODO.md/KVG_Standards pointer from PR #3 (merged, not draft) all still
   intact.
+- **2026-08-24 re-audit**: substantial new feature work landed —
+  [PR #5](https://github.com/gerp93/timeline-trivia/pull/5) (timelines/
+  eras/per-timeline categories) and
+  [PR #6](https://github.com/gerp93/timeline-trivia/pull/6) (deck-creation
+  timeline prompt, `/decks` page override with a timeline column/filter,
+  JSON import matched by era abbreviation), plus a `gameshell-framework`
+  bump to v0.19.0 to pick up its new `DeckCreationHook` extension point.
+  No drift found. Theming: the new `timelines.html` and
+  `deck-list-timeline-fields.html` (new `/decks` timeline column/filter +
+  create-time picker) use only `var(--color-border, ...)` /
+  `var(--color-accent-red, ...)` — both real `gameshell-framework`
+  `colors.css` tokens, fallback values matching the framework's own
+  `chat.css` usage of the same pattern; no hand-rolled hex palette. No new
+  `.css` files touched by either PR. `go.mod` pinned to
+  `gameshell-framework v0.19.0` (real tag, no `replace`); `go build ./...`
+  and `go vet ./...` both pass clean. No new dependencies added. LICENSE,
+  TODO.md, and the README KVG_Standards pointer all still present. The
+  JSON import format change (era matched by abbreviation, not full name)
+  is documented in-app on the deck's Import Cards panel. Pre-existing,
+  unrelated note: `tests/theme-validator/go.mod` (separate module, not
+  touched by PR #5/#6) is still pinned to `gameshell-framework v0.3.0`
+  under its original `grantfbarnes/card-judge` module path — worth a
+  human look eventually, not new drift from this feature work.
 
 ### card-judge
 - Fork status checked: GitHub lists it as a fork of `GrantFBarnes/card-judge`

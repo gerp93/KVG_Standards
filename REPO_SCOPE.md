@@ -9,11 +9,11 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 15 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 16 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
-timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate).
-VisualAssault is the theme producer, not a consumer. kvgrep and Valutique
-are excluded (no code yet).
+timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
+FileShuttle). VisualAssault is the theme producer, not a consumer. kvgrep
+and Valutique are excluded (no code yet).
 
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
@@ -42,6 +42,7 @@ That check has been skipped every run since; a human (or a session with
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
 | radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | TBD | TBD | TBD | N/A | No |
+| FileShuttle | Flet GUI | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -279,6 +280,29 @@ mechanical fix found; items still needing a human decision are marked
   standards-relevant files touched. LICENSE, theming inheritance, and the
   TODO.md/KVG_Standards pointer from PR #3 (merged, not draft) all still
   intact.
+- **2026-08-24 re-audit**: substantial new feature work landed —
+  [PR #5](https://github.com/gerp93/timeline-trivia/pull/5) (timelines/
+  eras/per-timeline categories) and
+  [PR #6](https://github.com/gerp93/timeline-trivia/pull/6) (deck-creation
+  timeline prompt, `/decks` page override with a timeline column/filter,
+  JSON import matched by era abbreviation), plus a `gameshell-framework`
+  bump to v0.19.0 to pick up its new `DeckCreationHook` extension point.
+  No drift found. Theming: the new `timelines.html` and
+  `deck-list-timeline-fields.html` (new `/decks` timeline column/filter +
+  create-time picker) use only `var(--color-border, ...)` /
+  `var(--color-accent-red, ...)` — both real `gameshell-framework`
+  `colors.css` tokens, fallback values matching the framework's own
+  `chat.css` usage of the same pattern; no hand-rolled hex palette. No new
+  `.css` files touched by either PR. `go.mod` pinned to
+  `gameshell-framework v0.19.0` (real tag, no `replace`); `go build ./...`
+  and `go vet ./...` both pass clean. No new dependencies added. LICENSE,
+  TODO.md, and the README KVG_Standards pointer all still present. The
+  JSON import format change (era matched by abbreviation, not full name)
+  is documented in-app on the deck's Import Cards panel. Pre-existing,
+  unrelated note: `tests/theme-validator/go.mod` (separate module, not
+  touched by PR #5/#6) is still pinned to `gameshell-framework v0.3.0`
+  under its original `grantfbarnes/card-judge` module path — worth a
+  human look eventually, not new drift from this feature work.
 
 ### card-judge
 - Fork status checked: GitHub lists it as a fork of `GrantFBarnes/card-judge`
@@ -319,6 +343,29 @@ mechanical fix found; items still needing a human decision are marked
   `/gs/css/home.css` instead, suggests a copy-paste slip. Also:
   `CLAUDE.md`'s "Gameshell Framework split (in progress)" section is now
   stale post-tag and could use a rewrite once #12 lands.
+- **2026-08-24 re-audit**: only new commit since 08-17 was a
+  `gameshell-framework` bump to v0.19.0 (touches only `go.mod`/`go.sum`,
+  no CSS/template changes) — pin is clean, no `replace` directive, no
+  theming drift. PR #12 (still open, not draft) and PR #14 (still open,
+  draft) both unchanged and not stale/conflicting with each other. The
+  `stats.html` broken-CSS-link bug and stale `CLAUDE.md` framework-split
+  section from the 2026-08-17 note are both still present, still
+  unaddressed, left for a human as before.
+  **New finding, fixed**: CI (`ci / build`) has never actually passed on
+  this repo — every run back through v0.16.0 (2026-08-05) fails with
+  `undefined: database.SeedDevUsersIfEmpty`, a function that doesn't
+  exist anywhere in this repo's history or in gameshell-framework itself;
+  its own call site was already commented `TODO(remove-me) ... Flagged
+  for likely removal`. The 2026-08-07 audit's "CI compliant" finding
+  checked that `ci.yml` was wired correctly, not that it actually went
+  green. Fixed by removing the dead call and its now-unused `database`
+  import in `src/main.go` — `go build ./...`/`go vet ./...` clean, and
+  CI went green on the fix's own run (first successful run in this
+  repo's history). Draft PR:
+  [card-judge #15](https://github.com/gerp93/card-judge/pull/15)
+  (`fix/remove-undefined-seed-dev-users` → `f-framework-breakout`). Once
+  #15 merges, PR #12 (currently showing the same failure, since it's
+  built off `f-framework-breakout`) should go green too.
 
 ### gameshell-framework
 - [x] **2026-08-07 audit** — [PR #4](https://github.com/gerp93/gameshell-framework/pull/4)
@@ -519,6 +566,54 @@ mechanical fix found; items still needing a human decision are marked
   `uvicorn` — `httpx2` is an unusual package name next to those (`fastapi`/
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
+
+### FileShuttle
+- **New repo, created 2026-08-19.** A Flet desktop app that moves files
+  between folders on a schedule — same category as KVGenius (Flet GUI).
+  Discovered and audited during the 2026-08-24 sweep; never previously
+  tracked here.
+- **Full audit, 2026-08-24 — fully compliant, no PR needed:**
+  - Theming: `visual-assault-flet` pinned `@v0.2.0` (a real tag, not
+    `@main`) in `requirements.txt`.
+  - Licensing: `LICENSE` (AGPL-3.0) present; dependencies (`flet[all]`,
+    `apscheduler`, `pystray`, `Pillow`, plus the VisualAssault/kvg_updater/
+    kvg_dblocation packages) are all permissive/LGPL, no blocker.
+  - Release/CI: both `auto-release.yml` and `cut-release.yml` present,
+    both correctly call `release-flet.yml@main` (interim exception, no
+    KVG_Standards tags exist yet) with matching `app_name`/`entry_point`/
+    `version_file`. `VERSION_BUMP.md` present at root with a real dated
+    entry.
+  - Update-check: `kvg_updater` bundle mode fully wired
+    (`fileshuttle/ui/updater.py` wraps `check_for_bundle_update`/
+    `download_and_extract_bundle`/`apply_bundle_update_and_restart`),
+    pinned `@main` in `requirements.txt` (interim exception). Settings UI
+    exposes a "Check for Updates" button.
+  - DB location: `kvg_dblocation`'s `DbLocation` wired into
+    `fileshuttle/db/connection.py`, pinned `@main` (interim exception).
+    Settings UI (`fileshuttle/ui/views/settings_view.py`) exposes all
+    three of "Use Existing Database File" (adopt), "Move Database To New
+    Location" (relocate), and "Reset to Default Location" (reset), each
+    behind a restart-required confirmation.
+  - Logo & branding: full placement checklist passes — `assets/logo.png`
+    source mark, `scripts/generate_icons.py` (Pillow, pads to square,
+    generates `assets/icon.png`/`icon.ico` from the one source — matches
+    the KVGrainy/Sweeper pattern), README hero image (top of
+    `README.md`), in-app window icon (`page.window.icon = "icon.ico"` in
+    `fileshuttle/ui/app.py`), in-app nav-rail logo usage, and a packaged-
+    binary icon (Flet's own build pipeline auto-discovers
+    `assets/icon.png` by convention — `release-flet.yml` has no
+    `icon_path` input the way `release-python-gui.yml` does, so this is
+    the correct mechanism for this stack, not a gap).
+  - Release notes: inherited correctly from KVG_Standards'
+    `release-flet.yml`, which already has `generate_release_notes: true`
+    + a `body:` install blurb — nothing repo-local to check here.
+  - Docs: `README.md` explicitly states the repo follows KVG_Standards
+    with a link, not just an incidental mention.
+  - `TODO.md` present, product backlog only (not a compliance list, per
+    the standard); notes CI test workflow as a known future gap (not a
+    KVG_Standards violation — no Python CI template exists yet).
+  - Not previously in this file's scope matrix or repo count — added
+    above.
 
 ## Open questions (theming)
 

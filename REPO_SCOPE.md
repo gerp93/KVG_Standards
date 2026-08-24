@@ -9,11 +9,11 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 15 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 16 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
-timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate).
-VisualAssault is the theme producer, not a consumer. kvgrep and Valutique
-are excluded (no code yet).
+timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
+FileShuttle). VisualAssault is the theme producer, not a consumer. kvgrep
+and Valutique are excluded (no code yet).
 
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
@@ -42,6 +42,7 @@ That check has been skipped every run since; a human (or a session with
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
 | radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | TBD | TBD | TBD | N/A | No |
+| FileShuttle | Flet GUI | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -519,6 +520,54 @@ mechanical fix found; items still needing a human decision are marked
   `uvicorn` — `httpx2` is an unusual package name next to those (`fastapi`/
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
+
+### FileShuttle
+- **New repo, created 2026-08-19.** A Flet desktop app that moves files
+  between folders on a schedule — same category as KVGenius (Flet GUI).
+  Discovered and audited during the 2026-08-24 sweep; never previously
+  tracked here.
+- **Full audit, 2026-08-24 — fully compliant, no PR needed:**
+  - Theming: `visual-assault-flet` pinned `@v0.2.0` (a real tag, not
+    `@main`) in `requirements.txt`.
+  - Licensing: `LICENSE` (AGPL-3.0) present; dependencies (`flet[all]`,
+    `apscheduler`, `pystray`, `Pillow`, plus the VisualAssault/kvg_updater/
+    kvg_dblocation packages) are all permissive/LGPL, no blocker.
+  - Release/CI: both `auto-release.yml` and `cut-release.yml` present,
+    both correctly call `release-flet.yml@main` (interim exception, no
+    KVG_Standards tags exist yet) with matching `app_name`/`entry_point`/
+    `version_file`. `VERSION_BUMP.md` present at root with a real dated
+    entry.
+  - Update-check: `kvg_updater` bundle mode fully wired
+    (`fileshuttle/ui/updater.py` wraps `check_for_bundle_update`/
+    `download_and_extract_bundle`/`apply_bundle_update_and_restart`),
+    pinned `@main` in `requirements.txt` (interim exception). Settings UI
+    exposes a "Check for Updates" button.
+  - DB location: `kvg_dblocation`'s `DbLocation` wired into
+    `fileshuttle/db/connection.py`, pinned `@main` (interim exception).
+    Settings UI (`fileshuttle/ui/views/settings_view.py`) exposes all
+    three of "Use Existing Database File" (adopt), "Move Database To New
+    Location" (relocate), and "Reset to Default Location" (reset), each
+    behind a restart-required confirmation.
+  - Logo & branding: full placement checklist passes — `assets/logo.png`
+    source mark, `scripts/generate_icons.py` (Pillow, pads to square,
+    generates `assets/icon.png`/`icon.ico` from the one source — matches
+    the KVGrainy/Sweeper pattern), README hero image (top of
+    `README.md`), in-app window icon (`page.window.icon = "icon.ico"` in
+    `fileshuttle/ui/app.py`), in-app nav-rail logo usage, and a packaged-
+    binary icon (Flet's own build pipeline auto-discovers
+    `assets/icon.png` by convention — `release-flet.yml` has no
+    `icon_path` input the way `release-python-gui.yml` does, so this is
+    the correct mechanism for this stack, not a gap).
+  - Release notes: inherited correctly from KVG_Standards'
+    `release-flet.yml`, which already has `generate_release_notes: true`
+    + a `body:` install blurb — nothing repo-local to check here.
+  - Docs: `README.md` explicitly states the repo follows KVG_Standards
+    with a link, not just an incidental mention.
+  - `TODO.md` present, product backlog only (not a compliance list, per
+    the standard); notes CI test workflow as a known future gap (not a
+    KVG_Standards violation — no Python CI template exists yet).
+  - Not previously in this file's scope matrix or repo count — added
+    above.
 
 ## Open questions (theming)
 

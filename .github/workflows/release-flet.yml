@@ -101,7 +101,7 @@ jobs:
         env:
           ENTRY_POINT: ${{ inputs.entry_point }}
 
-      - name: Stage release package
+      - name: Stage release files
         shell: bash
         run: |
           set -e
@@ -120,19 +120,51 @@ jobs:
           fi
           mkdir -p "$STAGE"
           cp -r "$OUT_DIR"/. "$STAGE/"
+          echo "STAGE_DIR=$STAGE" >> "$GITHUB_ENV"
 
           if [ "${{ matrix.platform }}" = "windows" ]; then
-            7z a -tzip "${STAGE}.zip" "$STAGE" > /dev/null
-            echo "ASSET_PATH=${STAGE}.zip" >> "$GITHUB_ENV"
+            EXE=$(find "$STAGE" -maxdepth 1 -name '*.exe')
+            echo "EXE_NAME=$(basename "$EXE")" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build Windows installer
+        if: matrix.platform == 'windows'
+        uses: gerp93/KVG_Standards/.github/actions/windows-installer@main
+        with:
+          app_name: ${{ inputs.app_name }}
+          app_version: ${{ inputs.version }}
+          source_dir: ${{ env.STAGE_DIR }}
+          exe_name: ${{ env.EXE_NAME }}
+          output_dir: installer_out
+          license_file: ${{ hashFiles('LICENSE') != '' && 'LICENSE' || '' }}
+
+      - name: Package release archive
+        shell: bash
+        run: |
+          set -e
+          if [ "${{ matrix.platform }}" = "windows" ]; then
+            7z a -tzip "${{ env.STAGE_DIR }}.zip" "${{ env.STAGE_DIR }}" > /dev/null
+            echo "ASSET_PATH=${{ env.STAGE_DIR }}.zip" >> "$GITHUB_ENV"
+
+            INSTALLER_PATH="${{ inputs.app_name }}-${{ inputs.version }}-windows-Setup.exe"
+            cp installer_out/*.exe "$INSTALLER_PATH"
+            echo "INSTALLER_PATH=$INSTALLER_PATH" >> "$GITHUB_ENV"
           else
-            tar czf "${STAGE}.tar.gz" "$STAGE"
-            echo "ASSET_PATH=${STAGE}.tar.gz" >> "$GITHUB_ENV"
+            tar czf "${{ env.STAGE_DIR }}.tar.gz" "${{ env.STAGE_DIR }}"
+            echo "ASSET_PATH=${{ env.STAGE_DIR }}.tar.gz" >> "$GITHUB_ENV"
           fi
 
       - uses: actions/upload-artifact@v4
         with:
           name: package-${{ matrix.platform }}
           path: ${{ env.ASSET_PATH }}
+
+      - name: Upload installer artifact
+        if: matrix.platform == 'windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-windows
+          path: ${{ env.INSTALLER_PATH }}
 
   release:
     needs: build
@@ -142,7 +174,6 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
-          pattern: package-*
           merge-multiple: true
 
       - name: Publish release
@@ -155,9 +186,7 @@ jobs:
           body: |
             ## Installing
 
-            Download the archive for your platform below and extract it — no installer needed:
-
-            - **Windows** — `${{ inputs.app_name }}-${{ inputs.version }}-windows.zip` → run the `.exe` inside
+            - **Windows** — download `${{ inputs.app_name }}-${{ inputs.version }}-windows-Setup.exe` and run it (Start Menu shortcut, optional desktop icon, and a proper uninstaller in Add/Remove Programs). Prefer no installer? `${{ inputs.app_name }}-${{ inputs.version }}-windows.zip` has the same build as a portable archive — extract it and run the `.exe` inside.
             - **macOS** — `${{ inputs.app_name }}-${{ inputs.version }}-macos.tar.gz` → open the `.app` inside
             - **Linux** — `${{ inputs.app_name }}-${{ inputs.version }}-linux.tar.gz` → run the extracted binary (`chmod +x` it first)
 

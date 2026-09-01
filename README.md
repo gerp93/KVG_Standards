@@ -41,6 +41,23 @@ repo's actual dependencies case by case (permissive/LGPL/GPL-or-later
 dependencies are fine; anything more restrictive is a real blocker) — see
 `licensing.md`.
 
+## Windows installer
+
+Any Windows build produced by `release-python-gui.yml`, `release-go-gui.yml`,
+or `release-flet.yml` also gets wrapped into a proper `Setup.exe` installer
+(Start Menu shortcut, optional desktop icon, uninstaller registered in Add/
+Remove Programs) via the
+[`windows-installer`](.github/actions/windows-installer) composite action —
+a shared Inno Setup script templated per app. The release still includes the
+plain portable exe/zip too; the installer is an additional download, not a
+replacement. Because these are reusable `workflow_call` workflows called by
+tag, every current and future consumer of the three workflows above picks
+this up automatically on its next release — no per-repo change needed.
+Electron apps already get a real installer from `electron-builder`
+(`release-electron.yml`), so this doesn't apply there; Godot
+(`release-godot.yml`) and the Stream Deck plugin workflow are excluded too —
+see `REPO_SCOPE.md` for why.
+
 ## Update-check
 
 Self-update (check GitHub Releases, download, replace the running binary)

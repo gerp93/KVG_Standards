@@ -520,6 +520,22 @@ mechanical fix found; items still needing a human decision are marked
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
 
+## Windows installer (new standard, 2026-09-01)
+
+`release-python-gui.yml`, `release-go-gui.yml`, and `release-flet.yml` now
+wrap their Windows build in a proper `Setup.exe` via a new shared
+`windows-installer` composite action (Inno Setup) — see README.md's
+"Windows installer" section for the mechanics. No matrix column added for
+this: unlike the other standards above, it isn't a per-repo customization —
+every current consumer of those three workflows (KVGrainy, KVGroove,
+KVG_Converter, KVG_RGB, gameshell-deploy, KVGenius) inherits it automatically
+on its next release, since the workflows are called by tag (`@main`) and the
+installer step lives inside them. Nothing to change in any of those repos.
+Electron consumers (Sweeper, TrackDraft, RolePlaymate) already ship a real
+installer via `electron-builder`, unaffected. Godot (`airport`) and the
+Stream Deck plugin (`KVGauge`) are deliberately excluded, same rationale as
+their existing theming/icon-gen exceptions.
+
 ## Open questions (theming)
 
 1. Should the CSS re-vendor script (`gameshell-framework/scripts/update-visual-assault-css.sh`)

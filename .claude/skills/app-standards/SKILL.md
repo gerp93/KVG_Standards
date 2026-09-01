@@ -195,6 +195,34 @@ gives a real, reviewable diff instead of an empty commit — see KVGrainy's
 - A repo with `auto-release.yml` but no `VERSION_BUMP.md`, or empty
   `git commit --allow-empty` commits used to force a release instead of it.
 
+## Windows installer
+
+Applies to the same three stacks as `release-python-gui.yml`,
+`release-go-gui.yml`, and `release-flet.yml` — any Windows build from those
+workflows now also ships as a proper `Setup.exe` installer (Start Menu
+shortcut, optional desktop icon, uninstaller in Add/Remove Programs), built
+by the shared `windows-installer` composite action
+(`.github/actions/windows-installer`) wrapping Inno Setup. The portable
+exe/zip stays in the release too — the installer is additive.
+
+- This is inherited automatically by every consumer of those three reusable
+  workflows on their next release (they're called by tag, and the installer
+  step lives inside the workflow) — **don't flag a repo as non-compliant
+  just because it hasn't made a local change**; there's nothing for the app
+  repo to do. Only flag it if the repo's own release notes/README claim "no
+  installer, portable only" in a way that's now stale, or if it vendors a
+  hand-rolled Windows installer/packaging script instead of relying on this.
+- Electron apps are already compliant via `electron-builder`
+  (`release-electron.yml`) — not a gap, don't flag.
+- Godot (`release-godot.yml`) and the Stream Deck plugin workflow
+  (`release-streamdeck.yml`) are deliberately out of scope, same as
+  theming/icon-gen for Godot — see `game-repos.md`. Not a gap to flag.
+- **Violation to flag:** a Python/PyInstaller, Wails, or Flet GUI repo with
+  its own bespoke Windows installer/packaging script (Inno Setup, NSIS,
+  WiX, or otherwise) instead of relying on the shared workflow step — same
+  drift risk as a hand-rolled theme palette or a copy-pasted
+  `version_bump.sh`.
+
 ## Update-check
 
 Applies to any repo in the "Desktop GUI app / plugin" category above that
@@ -292,9 +320,11 @@ When asked to check a repo against these standards:
 1. Identify its category from the table above (cross-check against
    `REPO_SCOPE.md` — add the repo there if it's missing).
 2. Check theming (if it has a UI), release/CI pipeline, update-check
-   (if it ships a binary end users run directly), licensing, logo &
-   branding, release notes, `VERSION_BUMP.md`, database location (if it
-   stores data in SQLite), and `TODO.md` against the checklists above.
+   (if it ships a binary end users run directly), Windows installer (if it
+   ships a Windows build via `release-python-gui.yml`/`release-go-gui.yml`/
+   `release-flet.yml`), licensing, logo & branding, release notes,
+   `VERSION_BUMP.md`, database location (if it stores data in SQLite), and
+   `TODO.md` against the checklists above.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo

@@ -274,19 +274,28 @@ func extractZipStream(r io.Reader, destDir string) error {
 	return nil
 }
 
-// findNewBinary locates the extracted package's executable inside
-// stagedDir. Matches release-go-gui.yml's exact packaging shape per OS —
-// see that workflow's "Stage release package" step.
-func findNewBinary(stagedDir, appName string) (string, error) {
+// packageRoot descends into stagedDir's single top-level
+// "{app_name}-{version}-{platform}" directory, if the archive was staged
+// with one (release-go-gui.yml's shape) — otherwise stagedDir itself is
+// already the package root.
+func packageRoot(stagedDir string) (string, error) {
 	entries, err := os.ReadDir(stagedDir)
 	if err != nil {
 		return "", err
 	}
-	// The archive contains one top-level "{app_name}-{version}-{platform}"
-	// directory; descend into it if present.
-	root := stagedDir
 	if len(entries) == 1 && entries[0].IsDir() {
-		root = filepath.Join(stagedDir, entries[0].Name())
+		return filepath.Join(stagedDir, entries[0].Name()), nil
+	}
+	return stagedDir, nil
+}
+
+// findNewBinary locates the extracted package's executable inside
+// stagedDir. Matches release-go-gui.yml's exact packaging shape per OS —
+// see that workflow's "Stage release package" step.
+func findNewBinary(stagedDir, appName string) (string, error) {
+	root, err := packageRoot(stagedDir)
+	if err != nil {
+		return "", err
 	}
 
 	switch runtime.GOOS {
@@ -316,4 +325,105 @@ func findNewBinary(stagedDir, appName string) (string, error) {
 		}
 		return "", fmt.Errorf("kvgupdate: no binary found in %s", root)
 	}
+}
+
+// syncStagedFiles copies everything in root into targetDir except skipNames
+// (matched by top-level entry name — the running binary/app bundle is
+// swapped separately by ApplyUpdateAndRestart, since a running executable
+// can't just be overwritten) and preserveNames (operator data that must
+// survive an update untouched, e.g. gameshell-deploy's "games" directory —
+// left alone even if the staged package also ships one).
+//
+// This is what makes an update actually update the files a Wails app ships
+// alongside its binary (scripts, templates, docs) instead of silently
+// leaving them at whatever version they were on install — DownloadAndExtract
+// already fetches all of it into stagedDir, this just stops discarding the
+// non-binary part of that download.
+func syncStagedFiles(root, targetDir string, skipNames, preserveNames map[string]bool) error {
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if skipNames[e.Name()] || preserveNames[e.Name()] {
+			continue
+		}
+		src := filepath.Join(root, e.Name())
+		dst := filepath.Join(targetDir, e.Name())
+		if e.IsDir() {
+			if err := copyDirOverwrite(src, dst); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := copyFileOverwrite(src, dst); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// copyDirOverwrite recursively copies src into dst, overwriting any file
+// that already exists at the destination. It never deletes anything already
+// present at dst — an update only adds/replaces staged files, it doesn't
+// prune ones the operator has locally.
+func copyDirOverwrite(src, dst string) error {
+	if err := os.MkdirAll(dst, 0o755); err != nil {
+		return err
+	}
+	entries, err := os.ReadDir(src)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		srcPath := filepath.Join(src, e.Name())
+		dstPath := filepath.Join(dst, e.Name())
+		if e.IsDir() {
+			if err := copyDirOverwrite(srcPath, dstPath); err != nil {
+				return err
+			}
+			continue
+		}
+		if err := copyFileOverwrite(srcPath, dstPath); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// copyFileOverwrite copies src to dst, truncating/creating dst as needed and
+// carrying over src's file mode (so a shell script's executable bit survives
+// the update).
+func copyFileOverwrite(src, dst string) error {
+	info, err := os.Stat(src)
+	if err != nil {
+		return err
+	}
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(out, in); err != nil {
+		out.Close()
+		return err
+	}
+	return out.Close()
+}
+
+// topLevelName returns the first path segment of path relative to root —
+// used to derive the skip-name for the running binary/app bundle (e.g.
+// "app.exe" or "App.app") so syncStagedFiles doesn't also try to copy it.
+func topLevelName(root, path string) (string, error) {
+	rel, err := filepath.Rel(root, path)
+	if err != nil {
+		return "", err
+	}
+	parts := strings.SplitN(rel, string(filepath.Separator), 2)
+	return parts[0], nil
 }

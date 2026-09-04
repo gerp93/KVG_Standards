@@ -41,10 +41,42 @@ repo's actual dependencies case by case (permissive/LGPL/GPL-or-later
 dependencies are fine; anything more restrictive is a real blocker) — see
 `licensing.md`.
 
+## Windows installer
+
+Any Windows build produced by `release-python-gui.yml`, `release-go-gui.yml`,
+or `release-flet.yml` also gets wrapped into a proper `Setup.exe` installer
+(Start Menu shortcut, optional desktop icon, uninstaller registered in Add/
+Remove Programs) via the
+[`windows-installer`](.github/actions/windows-installer) composite action —
+a shared Inno Setup script templated per app. The release still includes the
+plain portable exe/zip too; the installer is an additional download, not a
+replacement. Because these are reusable `workflow_call` workflows called by
+tag, every current and future consumer of the three workflows above picks
+this up automatically on its next release — no per-repo change needed.
+Electron apps already get a real installer from `electron-builder`
+(`release-electron.yml`), so this doesn't apply there; Godot
+(`release-godot.yml`) and the Stream Deck plugin workflow are excluded too —
+see `REPO_SCOPE.md` for why.
+
+Two workflow-level inputs (`windows_installer_scope`, defaulting to
+`perMachine`; `windows_installer_preserve_paths`, defaulting to none) pass
+straight through to the `windows-installer` action's `install_scope`/
+`preserve_paths` — see gameshell-deploy's `auto-release.yml`/`cut-release.yml`
+for the one case so far that needs them: an app that self-updates by
+rewriting its own install directory at runtime needs a `perUser` install
+(no admin elevation, so the unelevated running process can actually write
+there), and `preserve_paths` protects any operator-data directory the app
+ships a seed copy of (games/) from being clobbered on every reinstall.
+
+
+
 ## Update-check
 
-Self-update (check GitHub Releases, download, replace the running binary)
-is a shared component too, not something each app reinvents:
+Self-update (check GitHub Releases, download, replace the running build —
+the whole staged release package, not just the binary, so an app that
+ships scripts/templates/etc. alongside its executable doesn't drift out of
+sync with them) is a shared component too, not something each app
+reinvents:
 [`packages/python/kvg_updater`](packages/python/kvg_updater) (PyInstaller
 apps) and [`packages/go/kvgupdate`](packages/go/kvgupdate) (Wails/Go apps).
 Electron apps use `electron-updater` directly (see Sweeper's

@@ -4,6 +4,13 @@ name: Release (Go GUI / Wails)
 # gameshell-deploy's original release.yml, generalized so any Wails app can
 # call it. Callers tag first (see templates/cut-release.yml), then call
 # this with that tag.
+#
+# Stamps `inputs.version` into the built binary via
+# `-ldflags "-X main.appVersion=..."` — a Wails app using kvgupdate for
+# self-update must declare `var appVersion = "..."` in its `main` package
+# (see gameshell-deploy's gui/main.go) for this to land anywhere; without
+# it, the linker flag is a no-op and CheckForUpdate can never tell a
+# current build from a stale one.
 
 on:
   workflow_call:
@@ -81,10 +88,17 @@ jobs:
         working-directory: ${{ inputs.gui_dir }}
         shell: bash
         run: |
+          set -e
+          # Stamps main.appVersion so kvgupdate's CheckForUpdate can tell a
+          # current build from a stale one — without this every build
+          # reports the package's zero-value default forever, which
+          # kvgupdate parses as older than any real release and reports an
+          # update as "available" even when already current.
+          LDFLAGS="-X main.appVersion=${{ inputs.version }}"
           if [ "${{ matrix.platform }}" = "linux" ]; then
-            wails build -tags webkit2_41
+            wails build -tags webkit2_41 -ldflags "$LDFLAGS"
           else
-            wails build
+            wails build -ldflags "$LDFLAGS"
           fi
 
       - name: Stage release package

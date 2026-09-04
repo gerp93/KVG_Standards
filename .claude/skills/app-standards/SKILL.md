@@ -222,6 +222,19 @@ exe/zip stays in the release too — the installer is additive.
   WiX, or otherwise) instead of relying on the shared workflow step — same
   drift risk as a hand-rolled theme palette or a copy-pasted
   `version_bump.sh`.
+- Two optional passthrough inputs, `windows_installer_scope` (default
+  `perMachine`) and `windows_installer_preserve_paths` (default none), cover
+  the one real per-repo variation: an app that self-updates by rewriting its
+  own install directory at runtime needs `perUser` (installs under
+  `%LOCALAPPDATA%\Programs`, no admin elevation — a `perMachine`/Program
+  Files install isn't writable by the unelevated running process), and
+  `preserve_paths` protects an operator-data directory the release also
+  ships a seed copy of from being overwritten on every reinstall/update
+  (gameshell-deploy sets `windows_installer_scope: perUser` and
+  `windows_installer_preserve_paths: games` for exactly this reason — see
+  its `auto-release.yml`/`cut-release.yml`). Don't flag a repo for setting
+  these; do flag one that needed `perUser` semantics and instead worked
+  around it with a bespoke installer script (the violation above).
 
 ## Update-check
 

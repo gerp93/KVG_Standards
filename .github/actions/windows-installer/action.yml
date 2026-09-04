@@ -34,6 +34,24 @@ inputs:
     description: 'Publisher name shown in installer metadata and Add/Remove Programs'
     required: false
     default: 'gerp93'
+  install_scope:
+    description: >
+      'perMachine' (default) installs to Program Files and requires admin
+      elevation, matching most desktop installers. 'perUser' installs to
+      %LOCALAPPDATA%\Programs\<app_name> with no elevation prompt — pick
+      this for an app that rewrites its own install directory at runtime
+      (e.g. a self-updater), since a perMachine install under Program Files
+      is not writable by an unelevated running process.
+    required: false
+    default: 'perMachine'
+  preserve_paths:
+    description: >
+      Space-separated top-level names inside source_dir (e.g. a data
+      directory the app writes to) that an upgrade/reinstall must never
+      overwrite. Seeded on first install, left completely untouched on
+      every install after that — even if source_dir ships a newer copy.
+    required: false
+    default: ''
 
 outputs:
   installer_path:
@@ -65,9 +83,34 @@ runs:
           $iconLine = "SetupIconFile=$((Resolve-Path '${{ inputs.icon_file }}').Path)"
         }
 
+        $perUser = '${{ inputs.install_scope }}' -eq 'perUser'
+        $defaultDir = if ($perUser) { '{localappdata}\Programs\{#MyAppName}' } else { '{autopf}\{#MyAppName}' }
+        $privilegesLine = if ($perUser) { 'PrivilegesRequired=lowest' } else { '' }
+
         New-Item -ItemType Directory -Force -Path '${{ inputs.output_dir }}' | Out-Null
         $sourceDirAbs = (Resolve-Path '${{ inputs.source_dir }}').Path
         $outputDirAbs = (Resolve-Path '${{ inputs.output_dir }}').Path
+
+        $preservePaths = '${{ inputs.preserve_paths }}'.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
+        $excludesClause = ''
+        $preserveBlock = ''
+        if ($preservePaths.Count -gt 0) {
+          # Each preserved path is dropped from the main recursive copy
+          # (which always overwrites) and re-added as its own [Files] entry
+          # with onlyifdoesntexist, so it's seeded on first install but
+          # never touched again — an upgrade must not clobber operator data
+          # living under source_dir (e.g. gameshell-deploy's games/). Uses
+          # $sourceDirAbs directly rather than the {{SOURCE_DIR}} token:
+          # this block is spliced into $script after that token has already
+          # been replaced (below), so the token itself would never get
+          # substituted here.
+          $excludeNames = $preservePaths | ForEach-Object { "$_,$_\*" }
+          $excludesClause = "; Excludes: `"$($excludeNames -join ',')`""
+          $preserveLines = $preservePaths | ForEach-Object {
+            "Source: `"$sourceDirAbs\$_\*`"; DestDir: `"{app}\$_`"; Flags: ignoreversion recursesubdirs createallsubdirs onlyifdoesntexist skipifsourcedoesntexist"
+          }
+          $preserveBlock = $preserveLines -join "`r`n"
+        }
 
         # .Replace() is a literal string replace, not regex — safe against
         # backslashes in the Windows paths being substituted in.
@@ -79,7 +122,11 @@ runs:
           Replace('{{SOURCE_DIR}}', $sourceDirAbs).
           Replace('{{OUTPUT_DIR}}', $outputDirAbs).
           Replace('{{LICENSE_LINE}}', $licenseLine).
-          Replace('{{ICON_LINE}}', $iconLine)
+          Replace('{{ICON_LINE}}', $iconLine).
+          Replace('{{DEFAULT_DIR}}', $defaultDir).
+          Replace('{{PRIVILEGES_LINE}}', $privilegesLine).
+          Replace('{{EXCLUDES_CLAUSE}}', $excludesClause).
+          Replace('{{PRESERVE_FILES_BLOCK}}', $preserveBlock)
 
         $scriptPath = Join-Path $env:RUNNER_TEMP 'installer.iss'
         Set-Content -Path $scriptPath -Value $script

@@ -58,10 +58,25 @@ Electron apps already get a real installer from `electron-builder`
 (`release-godot.yml`) and the Stream Deck plugin workflow are excluded too —
 see `REPO_SCOPE.md` for why.
 
+Two workflow-level inputs (`windows_installer_scope`, defaulting to
+`perMachine`; `windows_installer_preserve_paths`, defaulting to none) pass
+straight through to the `windows-installer` action's `install_scope`/
+`preserve_paths` — see gameshell-deploy's `auto-release.yml`/`cut-release.yml`
+for the one case so far that needs them: an app that self-updates by
+rewriting its own install directory at runtime needs a `perUser` install
+(no admin elevation, so the unelevated running process can actually write
+there), and `preserve_paths` protects any operator-data directory the app
+ships a seed copy of (games/) from being clobbered on every reinstall.
+
+
+
 ## Update-check
 
-Self-update (check GitHub Releases, download, replace the running binary)
-is a shared component too, not something each app reinvents:
+Self-update (check GitHub Releases, download, replace the running build —
+the whole staged release package, not just the binary, so an app that
+ships scripts/templates/etc. alongside its executable doesn't drift out of
+sync with them) is a shared component too, not something each app
+reinvents:
 [`packages/python/kvg_updater`](packages/python/kvg_updater) (PyInstaller
 apps) and [`packages/go/kvgupdate`](packages/go/kvgupdate) (Wails/Go apps).
 Electron apps use `electron-updater` directly (see Sweeper's

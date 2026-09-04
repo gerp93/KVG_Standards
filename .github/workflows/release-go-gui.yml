@@ -41,6 +41,19 @@ on:
         required: false
         type: string
         default: ''
+      windows_installer_scope:
+        description: >
+          'perMachine' (default) or 'perUser' — see the windows-installer
+          action's install_scope input. Pick 'perUser' if this app rewrites
+          its own install directory at runtime (e.g. self-update).
+        required: false
+        type: string
+        default: 'perMachine'
+      windows_installer_preserve_paths:
+        description: 'Space-separated top-level names under extra_stage_paths that the Windows installer must seed once and never overwrite again (operator data) — see the windows-installer action''s preserve_paths input.'
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -139,6 +152,8 @@ jobs:
           exe_name: ${{ env.EXE_NAME }}
           output_dir: installer_out
           license_file: ${{ hashFiles('LICENSE') != '' && 'LICENSE' || '' }}
+          install_scope: ${{ inputs.windows_installer_scope }}
+          preserve_paths: ${{ inputs.windows_installer_preserve_paths }}
 
       - name: Package release archive
         shell: bash

@@ -138,6 +138,31 @@ mechanical fix found; items still needing a human decision are marked
   Also still true: the repo's default branch remains
   `migration/control-plane-scripts` rather than `main`, unusual this long
   after the stated migration. Needs a real source mark, not fabricated.
+- **2026-09-04**: Root-caused and fixed the self-update bug that had been
+  silently re-swapping the GUI binary on every "Check for Update" click
+  while `create.sh`/`delete.sh`/`templates/` underneath it drifted further
+  out of date — two compounding causes, both fixed on the KVG_Standards
+  side (the version-stamping gap noted above, plus the deeper one it was
+  masking): `release-go-gui.yml` never stamped `main.appVersion`, so a
+  built binary always reported the zero value, which `kvgupdate` parses as
+  lower than any real release — `CheckForUpdate` reported an update
+  "available" unconditionally, even when already current; and
+  `ApplyUpdateAndRestart` only ever replaced the executable, discarding
+  the rest of the staged download (`DownloadAndExtract` had already
+  fetched it in full). `release-go-gui.yml` now passes
+  `-ldflags "-X main.appVersion=..."`, and `ApplyUpdateAndRestart` now
+  takes a `targetDir` + `preserve` list and syncs everything staged except
+  the running binary and preserved paths into `targetDir` — gameshell-deploy
+  passes its OpsDir and preserves `games/`. Also added a real Windows
+  installer (`Setup.exe` via the shared `windows-installer` action,
+  `perUser` scope so the unelevated self-update can still write into its
+  own install directory, `games` in `preserve_paths`) in place of "download
+  a zip, extract it, run the exe inside" — closes the human-flagged gap
+  above. None of this has been run against a real tagged gameshell-deploy
+  release yet; verify end-to-end (ideally on Windows) before relying on it
+  silently. See gerp93/gameshell-deploy's matching `claude/game-shell-deploy-cleanup-0xynn7`
+  branch for the app-side half of this (the `App.GetOpsDir`/`ApplyUpdate`
+  wiring and the `create.sh`/`templates/setup.sh` revert below).
 
 ### Sweeper
 - [x] Re-vendored `src/renderer/themes.css` from VisualAssault

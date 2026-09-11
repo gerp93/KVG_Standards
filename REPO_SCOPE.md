@@ -9,11 +9,11 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 15 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 16 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
-timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate).
-VisualAssault is the theme producer, not a consumer. kvgrep and Valutique
-are excluded (no code yet).
+timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
+FileShuttle). VisualAssault is the theme producer, not a consumer. kvgrep
+and Valutique are excluded (no code yet).
 
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
@@ -42,6 +42,7 @@ That check has been skipped every run since; a human (or a session with
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
 | radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | TBD | TBD | TBD | N/A | No |
+| FileShuttle | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`) | Yes (AGPL-3.0) | Yes (`electron-updater`) | Not re-checked this session | Not re-checked this session | Yes | Yes — see fix below | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -164,6 +165,32 @@ mechanical fix found; items still needing a human decision are marked
   branch for the app-side half of this (the `App.GetOpsDir`/`ApplyUpdate`
   wiring and the `create.sh`/`templates/setup.sh` revert below).
 
+### FileShuttle
+- **Not previously tracked in this file.** Electron GUI (rewritten from a
+  Python/Flet app in PR #9), sql.js SQLite DB — same category and DB-layer
+  as Sweeper/TrackDraft/RolePlaymate.
+- [x] **2026-09-10: traced and fixed a real data-loss incident.** The
+  user's mappings appeared to vanish from the packaged/installed build.
+  Root cause: `app.setName('fileshuttle')` alone doesn't reliably keep dev
+  and packaged builds pointed at the same (or intentionally different)
+  userData folder, and `initDatabase()` silently creates a fresh empty
+  database with no warning if the resolved path doesn't exist — so any
+  path-resolution mismatch looks exactly like "my data disappeared." (On
+  this machine the actual data was intact the whole time — confirmed via
+  direct SQLite inspection — but the mechanism is real and this repo had
+  zero protection against it actually happening.) Fixed by adding the
+  three-part pattern now written up in `db-location-versioning.md`'s
+  "Instance isolation" section: `pinUserDataPath()` (dev gets an isolated
+  `fileshuttle-dev` folder, never shares a file with the packaged app),
+  `app.requestSingleInstanceLock()` (was already present here, kept as-is),
+  and a startup guard that blocks with a dialog instead of silently
+  seeding an empty DB when a *configured* custom db path is missing. See
+  `src/main/dbLocation.ts` (`pinUserDataPath`, `getConfiguredDbPath`) and
+  `src/main/main.ts`.
+- [ ] Not re-checked this session: logo & branding surface coverage,
+  release-notes patch job wiring, CLAUDE.md presence (README already
+  states it follows KVG_Standards).
+
 ### Sweeper
 - [x] Re-vendored `src/renderer/themes.css` from VisualAssault
   `packages/css/themes.css` @ `v0.2.0` — see
@@ -178,7 +205,18 @@ mechanical fix found; items still needing a human decision are marked
 - [x] Added `LICENSE` (AGPL-3.0) — see [PR #17](https://github.com/gerp93/Sweeper/pull/17), merged.
 - [x] Already has a working SQLite relocate feature (`src/main/dbLocation.ts`)
   — this became the reference pattern written up in
-  `db-location-versioning.md`. Nothing to do here.
+  `db-location-versioning.md`.
+- [x] **2026-09-10: added the "instance isolation" half of the pattern**
+  (previously only the relocate/adopt/reset bookkeeping existed). Sweeper's
+  old comment on `app.setName('sweeper')` explicitly said dev and packaged
+  *should* share one data folder — that's backwards for a finance app with
+  no other protection: no `app.requestSingleInstanceLock()` existed at
+  all, so two copies (or a dev run against a live packaged install) could
+  silently clobber each other via sql.js's whole-file overwrite-on-save.
+  Fixed to match FileShuttle's new reference shape: `pinUserDataPath()`
+  isolates dev into `sweeper-dev`, added the single-instance lock, and
+  `initDatabase()` is now guarded against a missing *configured* custom
+  path. See `src/main/dbLocation.ts` / `src/main/main.ts`.
 - [x] Re-checked newer standards (2026-08-07 audit), all now fixed in
   [PR #18](https://github.com/gerp93/Sweeper/pull/18) (draft):
   neither `README.md` nor a `CLAUDE.md` mentioned KVG_Standards at all
@@ -374,6 +412,12 @@ mechanical fix found; items still needing a human decision are marked
   update-check (`electron-updater` directly), DB location
   (`src/main/dbLocation.ts` + `Settings.tsx` already implement the full
   relocate/adopt/reset UI, matching Sweeper's reference shape).
+- [x] **2026-09-10: added the same instance-isolation fix as Sweeper/
+  FileShuttle** — had the identical gap (unconditional `app.setName`, no
+  single-instance lock, no guard against a missing configured db path).
+  `pinUserDataPath()` now isolates dev into `trackdraft-dev`, added
+  `app.requestSingleInstanceLock()`, and `initDatabase()` is guarded. See
+  `db-location-versioning.md`'s "Instance isolation" section.
 - [x] Fixed — [PR #1](https://github.com/gerp93/TrackDraft/pull/1) (draft):
   added a `CLAUDE.md` "Standards" section (repo had zero docs mentioning
   KVG_Standards); added missing `TODO.md` and `VERSION_BUMP.md`.
@@ -410,6 +454,25 @@ mechanical fix found; items still needing a human decision are marked
   `Settings.tsx`, same relocate/adopt/reset shape as TrackDraft/Sweeper),
   `TODO.md`, `VERSION_BUMP.md`, `CLAUDE.md`/`README.md` both state the repo
   follows KVG_Standards.
+- **2026-09-10 note, no action needed:** already ahead of the
+  "instance isolation" pattern added to `db-location-versioning.md` this
+  session (found while fixing the same class of bug in FileShuttle/Sweeper/
+  TrackDraft). RolePlaymate independently built: `app.setName(app.isPackaged
+  ? 'roleplaymate' : 'roleplaymate-dev')` (dev isolation), an explicit
+  `enforceDevDatabaseIsolation()` runtime check that resets dev's db path
+  if it's ever pointed at the packaged app's database, and — notably —
+  uses Node's built-in `node:sqlite` (`DatabaseSync`, WAL mode, real
+  incremental file writes) instead of `sql.js`. That last part is a bigger
+  deal than the other two: `sql.js` is the actual root cause of *why*
+  concurrent-instance protection is so critical for the other three apps
+  (it keeps the whole DB in memory and overwrites the file wholesale on
+  every save, so a stale second writer clobbers everything with no merge).
+  `node:sqlite` doesn't have that failure mode at all. Worth a deliberate
+  follow-up decision (not done in this session): whether new Electron
+  apps should default to `node:sqlite` instead of `sql.js`, and whether
+  migrating Sweeper/TrackDraft/FileShuttle off `sql.js` is worth the
+  effort given the tactical fix already landed. See RolePlaymate's
+  `src/main/dbLocation.ts` and `src/main/database/schema.ts`.
 - [ ] **Needs a human decision**: logo & branding entirely absent — no
   `assets/logo.png` exists yet. `scripts/generate-icons.js` is wired
   (verbatim copy of TrackDraft's sharp-based generator) but inert until a

@@ -12,7 +12,7 @@ below), and keep it current as repos are added, retired, or reclassified.
 Scope: the 16 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
 timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
-FileShuttle), plus **Bracketeer** (planned, not yet scaffolded — see below).
+FileShuttle, **Bracketeer**).
 VisualAssault is the theme producer, not a consumer. kvgrep and Valutique
 are excluded (no code yet).
 
@@ -44,7 +44,7 @@ That check has been skipped every run since; a human (or a session with
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
 | radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | TBD | TBD | TBD | N/A | No |
 | FileShuttle | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`) | Yes (AGPL-3.0) | Yes (`electron-updater`) | Not re-checked this session | Not re-checked this session | Yes | Yes — see fix below | Yes |
-| Bracketeer | Electron GUI (planned, not yet scaffolded) | Planned — VisualAssault, pinned tag | Planned — AGPL-3.0 | Planned — `electron-updater` | Planned | Planned | Planned | Planned — `dbLocation.ts` pattern | Planned |
+| Bracketeer | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`) | Yes (AGPL-3.0) | Yes (`electron-updater`) | TBD — no `assets/logo.png` yet, deliberately deferred | Yes (inherited from `release-electron.yml`) | Yes | Yes (`dbLocation.ts` pattern) | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -611,27 +611,39 @@ mechanical fix found; items still needing a human decision are marked
   intentional and not a typo before it ships.
 
 ### Bracketeer
-- **Planned, not yet scaffolded** (added to this doc 2026-09-13 ahead of
-  repo creation, so the intended standards wiring is on record before the
-  first commit). A Roth IRA conversion planner for households approaching
-  or entering retirement — full year-by-year projection of a household's
-  taxes (federal + Minnesota, other states via a flat-rate fallback),
-  IRMAA, and Social Security taxation under user-controlled conversion
-  amounts. Calculates only, does not recommend or optimize, in v1. Not
-  distributed to the general public; may be public on GitHub but not
-  advertised.
+- **Created 2026-09-13** at [gerp93/Bracketeer](https://github.com/gerp93/Bracketeer)
+  (this doc recorded it as planned ahead of repo creation; now scaffolded
+  and largely built). A Roth IRA conversion planner for households
+  approaching or entering retirement — full year-by-year projection of a
+  household's federal + Minnesota tax, IRMAA, and Social Security
+  taxation under user-controlled conversion amounts. Calculates only,
+  does not recommend or optimize, in v1. Not distributed to the general
+  public; may be public on GitHub but not advertised.
 - **Category: Electron GUI** — fits the existing category cleanly, no new
-  standard needed. Gets **both** `auto-release.yml` and `cut-release.yml`
-  calling `release-electron.yml`, `VERSION_BUMP.md`, `electron-updater`
-  (per Sweeper's `src/main/main.ts`), VisualAssault CSS pinned to a
-  released tag, AGPL-3.0 (to be checked against its actual dependency tree
-  once one exists), SQLite via Sweeper's `src/main/dbLocation.ts` pattern
-  (scenario/household data is local, user-relocatable), `assets/logo.png`
-  + a Node/sharp `scripts/generate-icons.js` across all four surfaces, and
-  `TODO.md`/`README.md`/`CLAUDE.md` pointing back to KVG_Standards.
-- All "Planned" cells in the scope matrix above should flip to "Yes" (or a
-  documented gap) once the repo is scaffolded — a future audit pass should
-  check this rather than assume.
+  standard was needed. `auto-release.yml` + `cut-release.yml` calling
+  `release-electron.yml`, `VERSION_BUMP.md`, `electron-updater` (following
+  Sweeper's `src/main/main.ts`), VisualAssault `themes.css` vendored @
+  `v0.2.0`, AGPL-3.0 `LICENSE`, SQLite via Sweeper's `src/main/dbLocation.ts`
+  pattern (scenarios stored locally, user-relocatable via the same
+  get/browseExisting/browseNew/set/resetToDefault IPC shape), and
+  `TODO.md`/`README.md`/`CLAUDE.md` all pointing back to KVG_Standards.
+- **Logo & branding gap, deliberate and tracked**: no `assets/logo.png`
+  yet, per explicit direction to defer it. `scripts/generate-icons.js` is
+  in place and every consuming surface (window icon, in-app usage,
+  packaged-binary icon) is already wired to read from it the moment a
+  source mark is added — same "TBD, not silently skipped" treatment as
+  other repos' outstanding logo gaps elsewhere in this doc.
+- **Release notes**: inherited automatically from `release-electron.yml`
+  (its `gh api` PATCH step already carries `body`/`generate_release_notes`)
+  — nothing for the app repo to do, same as every other consumer of that
+  reusable workflow.
+- Substantial engine work beyond standards compliance: a federal +
+  Minnesota tax engine (70 tests passing, including one hand-computed
+  end-to-end scenario), a year-by-year projection with the "widow's
+  penalty" filing-status switch modeled explicitly, and a marginal-rate
+  analyzer computed by finite difference on the real engine. Tax figures
+  are 2025 estimates not yet verified against MN DOR/IRS publications —
+  see the repo's own `TODO.md`, not a KVG_Standards concern.
 
 ## Windows installer (new standard, 2026-09-01)
 

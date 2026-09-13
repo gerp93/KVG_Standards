@@ -12,8 +12,9 @@ below), and keep it current as repos are added, retired, or reclassified.
 Scope: the 16 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
 timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
-FileShuttle). VisualAssault is the theme producer, not a consumer. kvgrep
-and Valutique are excluded (no code yet).
+FileShuttle), plus **Bracketeer** (planned, not yet scaffolded — see below).
+VisualAssault is the theme producer, not a consumer. kvgrep and Valutique
+are excluded (no code yet).
 
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
@@ -43,6 +44,7 @@ That check has been skipped every run since; a human (or a session with
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
 | radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | TBD | TBD | TBD | N/A | No |
 | FileShuttle | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`) | Yes (AGPL-3.0) | Yes (`electron-updater`) | Not re-checked this session | Not re-checked this session | Yes | Yes — see fix below | Yes |
+| Bracketeer | Electron GUI (planned, not yet scaffolded) | Planned — VisualAssault, pinned tag | Planned — AGPL-3.0 | Planned — `electron-updater` | Planned | Planned | Planned | Planned — `dbLocation.ts` pattern | Planned |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -607,6 +609,29 @@ mechanical fix found; items still needing a human decision are marked
   `uvicorn` — `httpx2` is an unusual package name next to those (`fastapi`/
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
+
+### Bracketeer
+- **Planned, not yet scaffolded** (added to this doc 2026-09-13 ahead of
+  repo creation, so the intended standards wiring is on record before the
+  first commit). A Roth IRA conversion planner for households approaching
+  or entering retirement — full year-by-year projection of a household's
+  taxes (federal + Minnesota, other states via a flat-rate fallback),
+  IRMAA, and Social Security taxation under user-controlled conversion
+  amounts. Calculates only, does not recommend or optimize, in v1. Not
+  distributed to the general public; may be public on GitHub but not
+  advertised.
+- **Category: Electron GUI** — fits the existing category cleanly, no new
+  standard needed. Gets **both** `auto-release.yml` and `cut-release.yml`
+  calling `release-electron.yml`, `VERSION_BUMP.md`, `electron-updater`
+  (per Sweeper's `src/main/main.ts`), VisualAssault CSS pinned to a
+  released tag, AGPL-3.0 (to be checked against its actual dependency tree
+  once one exists), SQLite via Sweeper's `src/main/dbLocation.ts` pattern
+  (scenario/household data is local, user-relocatable), `assets/logo.png`
+  + a Node/sharp `scripts/generate-icons.js` across all four surfaces, and
+  `TODO.md`/`README.md`/`CLAUDE.md` pointing back to KVG_Standards.
+- All "Planned" cells in the scope matrix above should flip to "Yes" (or a
+  documented gap) once the repo is scaffolded — a future audit pass should
+  check this rather than assume.
 
 ## Windows installer (new standard, 2026-09-01)
 

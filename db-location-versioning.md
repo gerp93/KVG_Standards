@@ -64,6 +64,44 @@ not just the path bookkeeping above:
      setTimeout(() => process.exit(0), 1000);
    }
    ```
+   **The actual confirmed root cause of a real "my data disappeared"
+   incident (2026-09) lives here, not in path resolution**: `app.on(
+   'second-instance', ...)` is registered synchronously, active from the
+   moment the process starts — well before `app.whenReady()`'s callback
+   has finished `await initDatabase()` (loading the sql.js WASM engine
+   takes a moment). If a second launch attempt lands in that window, the
+   handler sees `mainWindow` as still `null` and creates a *second*
+   window immediately. That window's renderer boots and calls the API
+   before `registerIPCHandlers()` has run in the (still-starting) first
+   process, so every IPC call fails with "No handler registered for
+   ...", and nothing retries — the window is stuck forever showing
+   defaults (fallback theme, zero rows), even though the real database
+   was never touched and is completely fine. The original startup flow
+   finishes a moment later and creates its *own*, correctly-working
+   window — so both windows exist at once (this is also what a "two
+   taskbar icons for one app" report turns out to be). Every attempt to
+   diagnose this by inspecting the database or doing a clean single
+   launch will find nothing wrong, because nothing *is* wrong with the
+   data — reproducing it requires timing a second launch attempt against
+   the first one's own startup, which a live debugger session (caught
+   with the user's help, mid-incident) is what actually exposed it via
+   the DevTools console. Gate on an `appInitialized` flag set only after
+   `registerIPCHandlers()`/`createWindow()` have both run, and make
+   `second-instance` a no-op until then:
+   ```ts
+   let appInitialized = false;
+   app.on('second-instance', () => {
+     if (!appInitialized) return; // startup still in progress
+     showWindow();
+   });
+   // ...later, at the end of the whenReady callback:
+   registerIPCHandlers();
+   createWindow();
+   appInitialized = true;
+   ```
+   Verified (FileShuttle): 5 rapid-fire launches 60ms apart reliably
+   produced the orphaned-window/IPC-error state before this guard, and
+   consistently produced exactly one working window after it.
 3. **Never silently create a fresh empty database when a *configured*
    custom path is missing** (drive unplugged, cloud-synced folder not
    mounted yet). `initDatabase()`'s existing "create if the default path

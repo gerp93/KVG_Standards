@@ -187,6 +187,23 @@ mechanical fix found; items still needing a human decision are marked
   seeding an empty DB when a *configured* custom db path is missing. See
   `src/main/dbLocation.ts` (`pinUserDataPath`, `getConfiguredDbPath`) and
   `src/main/main.ts`.
+- [x] **2026-09-12: found the actual root cause of the recurring reports**
+  (the 2026-09-10 fix above was real hardening but not the culprit).
+  Caught live with the user's help — had them open DevTools on an actual
+  broken launch, which showed "No handler registered for 'mappings:list'"
+  etc. in the console. Root cause: `second-instance` is a synchronous
+  listener active from process start, well before `initDatabase()`
+  resolves; a second launch landing in that window makes it create an
+  orphaned second `BrowserWindow` whose renderer calls the API before
+  `registerIPCHandlers()` has run in the still-starting first process.
+  That window is stuck forever showing defaults (blue_oval theme, zero
+  mappings) — while the real database was fine the entire time, and the
+  original startup flow creates its *own* correct window moments later
+  (both coexist — this is also what "two taskbar icons" turned out to
+  be). See `db-location-versioning.md`'s expanded write-up under item 2.
+  Fixed with an `appInitialized` guard; verified via 5 rapid-fire
+  launches 60ms apart (reliably broken before, reliably one working
+  window after).
 - [ ] Not re-checked this session: logo & branding surface coverage,
   release-notes patch job wiring, CLAUDE.md presence (README already
   states it follows KVG_Standards).
@@ -217,6 +234,12 @@ mechanical fix found; items still needing a human decision are marked
   isolates dev into `sweeper-dev`, added the single-instance lock, and
   `initDatabase()` is now guarded against a missing *configured* custom
   path. See `src/main/dbLocation.ts` / `src/main/main.ts`.
+- [x] **2026-09-12: applied the actual root-cause fix** found and
+  confirmed in FileShuttle — an `appInitialized` guard on the
+  `second-instance` handler, closing a real race where a second launch
+  attempt during startup creates an orphaned, permanently-broken window.
+  See `db-location-versioning.md`'s expanded write-up and FileShuttle's
+  REPO_SCOPE entry for the full mechanism.
 - [x] Re-checked newer standards (2026-08-07 audit), all now fixed in
   [PR #18](https://github.com/gerp93/Sweeper/pull/18) (draft):
   neither `README.md` nor a `CLAUDE.md` mentioned KVG_Standards at all
@@ -418,6 +441,12 @@ mechanical fix found; items still needing a human decision are marked
   `pinUserDataPath()` now isolates dev into `trackdraft-dev`, added
   `app.requestSingleInstanceLock()`, and `initDatabase()` is guarded. See
   `db-location-versioning.md`'s "Instance isolation" section.
+- [x] **2026-09-12: applied the actual root-cause fix** found and
+  confirmed in FileShuttle — an `appInitialized` guard on the
+  `second-instance` handler, closing a real race where a second launch
+  attempt during startup creates an orphaned, permanently-broken window.
+  See `db-location-versioning.md`'s expanded write-up and FileShuttle's
+  REPO_SCOPE entry for the full mechanism.
 - [x] Fixed — [PR #1](https://github.com/gerp93/TrackDraft/pull/1) (draft):
   added a `CLAUDE.md` "Standards" section (repo had zero docs mentioning
   KVG_Standards); added missing `TODO.md` and `VERSION_BUMP.md`.

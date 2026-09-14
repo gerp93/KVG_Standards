@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -9,7 +9,8 @@ Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards)
 This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
 `update-check-versioning.md` / `licensing.md` / `db-location-versioning.md`
-/ `game-repos.md` / `.github/workflows/` over anything cached here.
+/ `electron-menu.md` / `game-repos.md` / `.github/workflows/` over anything
+cached here.
 
 ## Docs must point back here
 
@@ -285,6 +286,34 @@ Stream Deck plugin — see below).
   file or the Elgato Marketplace, not self-updated. Don't add update-check
   here without a specific reason to override that.
 
+## Electron application menu
+
+Applies to Electron GUI repos only (Sweeper, TrackDraft, RolePlaymate,
+Bracketeer, FileShuttle). See `electron-menu.md` for the full rule and
+reference implementation; summary:
+
+- No relying on Electron's default menu bar (File/Edit/View/Window/Help
+  with every stock item). Call `Menu.setApplicationMenu` with an explicit
+  template that keeps only View (dev tools gated behind
+  `!app.isPackaged`, zoom, fullscreen) and Help (repo link, issues link,
+  version), plus the macOS-only app-name menu on `darwin`.
+- Dropping the Edit menu needs a `context-menu` webContents handler
+  (cut/copy/paste/selectAll from `params.editFlags`) so those actions stay
+  reachable by right-click. [gerp93/RolePlaymate](https://github.com/gerp93/RolePlaymate)'s
+  `setupApplicationMenu`/`attachContextMenu` in `src/main/main.ts` is the
+  reference; [gerp93/Bracketeer](https://github.com/gerp93/Bracketeer)'s
+  `src/main/menu.ts` is a smaller second example.
+- **Violation to flag:** an Electron repo with no `Menu.setApplicationMenu`
+  call anywhere in `src/main/` (still on Electron's default menu).
+- **Violation to flag:** a custom menu that still ships File/Edit/Window
+  entries with no stated reason, or dev-only items
+  (`reload`/`forceReload`/`toggleDevTools`) not gated behind
+  `!app.isPackaged`.
+- **Current known gap (2026-09-13):** only RolePlaymate (origin) and
+  Bracketeer (adopted same session) currently do this. Sweeper, TrackDraft,
+  and FileShuttle are still on Electron's default menu — known drift, not
+  yet fixed; see `REPO_SCOPE.md`'s "Application menu" column.
+
 ## SQLite database location
 
 Applies to any app that stores its own data in a local SQLite file (not a
@@ -335,9 +364,10 @@ When asked to check a repo against these standards:
 2. Check theming (if it has a UI), release/CI pipeline, update-check
    (if it ships a binary end users run directly), Windows installer (if it
    ships a Windows build via `release-python-gui.yml`/`release-go-gui.yml`/
-   `release-flet.yml`), licensing, logo & branding, release notes,
-   `VERSION_BUMP.md`, database location (if it stores data in SQLite), and
-   `TODO.md` against the checklists above.
+   `release-flet.yml`), licensing, application menu (if it's Electron),
+   logo & branding, release notes, `VERSION_BUMP.md`, database location
+   (if it stores data in SQLite), and `TODO.md` against the checklists
+   above.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo

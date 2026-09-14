@@ -91,6 +91,18 @@ file (for backup/syncing), not hardcode a fixed path:
 Python apps. Electron apps follow Sweeper's `src/main/dbLocation.ts`
 directly as the reference pattern — see `db-location-versioning.md`.
 
+## Electron application menu
+
+Electron apps replace the noisy default menu bar (File/Edit/View/Window/Help,
+full of items that don't apply to a single-window, non-document app) with an
+explicit template keeping only View (dev tools gated behind
+`!app.isPackaged`, zoom, fullscreen) and Help (repo link, issues link,
+version) — plus a right-click context menu so dropping the Edit menu doesn't
+lose Cut/Copy/Paste/Select All. [gerp93/RolePlaymate](https://github.com/gerp93/RolePlaymate)
+(`src/main/main.ts`) is the reference implementation;
+[gerp93/Bracketeer](https://github.com/gerp93/Bracketeer) (`src/main/menu.ts`)
+is a smaller second example. See `electron-menu.md`.
+
 ## Logo & branding
 
 Every new app repo checks in a source logo (`assets/logo.png`) and generates

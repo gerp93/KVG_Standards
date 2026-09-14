@@ -30,19 +30,19 @@ That check has been skipped every run since; a human (or a session with
 | KVGrainy | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
 | KVGroove | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
 | gameshell-deploy (`gui/`) | Go/Wails GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
-| Sweeper | Electron GUI | Yes | Yes | Yes | No — still Electron's default menu bar (File/Edit/View/Window/Help, unfiltered); no `Menu.setApplicationMenu` call found in `src/main/` (checked 2026-09-13) | Yes | Yes | Yes | Yes | Yes |
+| Sweeper | Electron GUI | Yes | Yes | Yes | Fix opened 2026-09-14 — [PR #30](https://github.com/gerp93/Sweeper/pull/30) (draft), ports RolePlaymate/Bracketeer's `setupApplicationMenu`/`attachContextMenu` pattern into new `src/main/menu.ts` | Yes | Yes | Yes | Yes | Yes |
 | KVG_Converter | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
 | KVGenius | Flet GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | Yes | Yes |
 | KVGauge | Stream Deck plugin | TBD — needs a decision, see below | Yes | N/A by design | N/A — not Electron | N/A-shaped — plugin uses its own `manifest.json` icon conventions, not the generic checklist; already populated | Yes | Yes | N/A | Yes |
 | gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — not Electron | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
 | card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | N/A — not Electron | TBD — only a favicon, no `assets/logo.png`; low priority per web-app category | N/A — CI gate only, no release pipeline | N/A | N/A — uses MariaDB (server-side), not SQLite | Yes |
 | timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | N/A — not Electron | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
-| TrackDraft | Electron GUI | Yes | Yes | Yes | No — still Electron's default menu bar; no `Menu.setApplicationMenu` call found in `src/main/` (checked 2026-09-13) | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
+| TrackDraft | Electron GUI | Yes | Yes | Yes | Fix opened 2026-09-14 — [PR #9](https://github.com/gerp93/TrackDraft/pull/9) (draft), ports RolePlaymate/Bracketeer/Sweeper's `setupApplicationMenu`/`attachContextMenu` pattern into new `src/main/menu.ts` | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
 | RolePlaymate | Electron GUI | Yes | Yes | Yes | Yes — origin of the standard (`setupApplicationMenu`/`attachContextMenu` in `src/main/main.ts`); see `electron-menu.md` | TBD — no `assets/logo.png` at all; the in-app logo `<img>` tags degrade gracefully (hidden on load failure) rather than showing a broken image or a fabricated placeholder | Yes | Yes | Yes | Yes |
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | N/A — not Electron | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | N/A — not Electron | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
 | radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | N/A — not Electron | TBD | TBD | TBD | N/A | No |
-| FileShuttle | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`) | Yes (AGPL-3.0) | Yes (`electron-updater`) | No — only a `Tray` context menu exists (`Menu.buildFromTemplate` for `tray.setContextMenu`); no `Menu.setApplicationMenu` call for the main window's menu bar (checked 2026-09-13) | Not re-checked this session | Not re-checked this session | Yes | Yes — see fix below | Yes |
+| FileShuttle | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`) | Yes (AGPL-3.0) | Yes (`electron-updater`) | Fix opened 2026-09-14 — [PR #19](https://github.com/gerp93/FileShuttle/pull/19) (draft) ports RolePlaymate/Bracketeer's `setupApplicationMenu`/`attachContextMenu` pattern; previously no `Menu.setApplicationMenu` call at all (only a `Tray` context menu) | Yes (2026-09-14 check) — `assets/logo.png` in README, `assets/icon.png` set as `BrowserWindow`/`Tray` icon, `src/renderer/components/Layout.tsx` uses the generated logo in the nav rail, `build/icon.png` generated by `scripts/generate-icons.js` for electron-builder's packaged-binary icon | Yes (2026-09-14 check) — inherited automatically via `release-electron.yml@main`'s `release-notes` patch job, nothing repo-local to wire | Yes | Yes — see fix below | Yes |
 | Bracketeer | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`, same pattern as FileShuttle) | Yes (AGPL-3.0) | Yes — `electron-updater` wired in `src/main/main.ts` (`setupAutoUpdater`/`checkForUpdatesNow`), and (2026-09-13) actually surfaced in the Settings UI with a "Check for Updates" button, version display, and status messages — was previously wired but not exposed | Yes — added 2026-09-13, adopting the pattern from RolePlaymate (`src/main/menu.ts`); second adopter after RolePlaymate itself | TBD — no `assets/logo.png` at all; `scripts/generate-icons.js` exists and matches the standard Node/sharp script but has nothing to run against yet (its own header comment says so); gap is tracked in Bracketeer's own `TODO.md` | Yes — `auto-release.yml`/`cut-release.yml` both call `release-electron.yml@main`, which patches release notes automatically | Yes | Yes — `src/main/dbLocation.ts` follows Sweeper's reference pattern, Settings UI exposes current path/choose existing/choose new/reset | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
@@ -209,6 +209,52 @@ mechanical fix found; items still needing a human decision are marked
   release-notes patch job wiring, CLAUDE.md presence (README already
   states it follows KVG_Standards).
 
+**2026-09-14 audit** (6 new commits since 2026-09-07: db-instance-isolation
+polish, dialog-focus fix, loading-screen-on-launch, startup-diagnostic
+logging, a startup watchdog + its own follow-up fix, and the Electron
+28→44 upgrade):
+- [x] **Electron version: confirmed current.** [PR #18](https://github.com/gerp93/FileShuttle/pull/18)
+  (merged) bumped `electron` `^28.0.0` → `^44.0.0` (current per `npm view
+  electron version` at audit time) and `electron-builder` 24→26 for
+  compatibility, as the live test case named in `electron-versioning.md`
+  for whether a current Electron/V8 build affects the unreproducible
+  startup hang chased across #13-17. Not proof the hang is gone (it was
+  intermittent under 28 too), but 6 consecutive clean launches at 15-25ms
+  each is a real positive signal. No further action needed here — this
+  was the flagged gap and it's closed.
+- [x] **Application menu: still the flagged gap, now fixed.** None of the
+  6 recent commits touched `src/main/main.ts`'s menu setup — confirmed by
+  reading it directly, no `Menu.setApplicationMenu` call existed anywhere
+  in `src/main/`. Opened [PR #19](https://github.com/gerp93/FileShuttle/pull/19)
+  (draft): new `src/main/menu.ts` ports RolePlaymate/Bracketeer's
+  `setupApplicationMenu()`/`attachContextMenu()` verbatim (View + Help
+  only, macOS app-name menu, right-click cut/copy/paste/select-all
+  replacing the dropped Edit menu), wired into `main.ts` (`setupApplicationMenu()`
+  in `whenReady()`, `attachContextMenu(mainWindow)` at the end of
+  `createWindow()` so it covers both the initial loading-screen window and
+  any window recreated later via `showWindow()`). `tsc --noEmit` clean for
+  both `tsconfig.main.json` and `tsconfig.json`; not yet manually
+  exercised in a real launch (draft PR, flagged in its own test plan).
+- [x] **Logo & branding: actually checked, fully compliant.** `assets/logo.png`
+  (README, near the top), `assets/icon.png`/`icon.ico` (both committed,
+  used as the `BrowserWindow`/`Tray` `icon`), `src/renderer/components/Layout.tsx`
+  imports the generated `src/renderer/assets/logo.png` for the nav rail
+  (in-app usage), and `scripts/generate-icons.js` (Node/sharp, matches the
+  Sweeper reference shape) generates `build/icon.png` for electron-builder's
+  packaged-binary icon — all four surfaces covered, nothing hand-exported.
+  No gap.
+- [x] **Release notes: inherited, confirmed.** `.github/workflows/auto-release.yml`
+  and `cut-release.yml` both call `release-electron.yml@main`, which
+  already patches release notes via its `release-notes` job — nothing
+  repo-local to wire. No gap.
+- [x] **CLAUDE.md: absent, not a violation.** README's second paragraph
+  already states the repo follows KVG_Standards by name with a link — the
+  "README and/or CLAUDE.md" requirement is satisfied by the README alone.
+- [x] Theming, licensing, DB-location/instance-isolation, `TODO.md`,
+  `VERSION_BUMP.md` spot-checked against the current commit
+  (`3f70d32`/PR #18 merge) — all still compliant, no drift from the prior
+  session's findings.
+
 ### Sweeper
 - [x] Re-vendored `src/renderer/themes.css` from VisualAssault
   `packages/css/themes.css` @ `v0.2.0` — see
@@ -242,7 +288,9 @@ mechanical fix found; items still needing a human decision are marked
   See `db-location-versioning.md`'s expanded write-up and FileShuttle's
   REPO_SCOPE entry for the full mechanism.
 - [x] Re-checked newer standards (2026-08-07 audit), all now fixed in
-  [PR #18](https://github.com/gerp93/Sweeper/pull/18) (draft):
+  [PR #18](https://github.com/gerp93/Sweeper/pull/18) (**merged
+  2026-08-07** — corrected below; this file previously said "draft/open",
+  which was stale):
   neither `README.md` nor a `CLAUDE.md` mentioned KVG_Standards at all
   (violation of "docs must point back here"); README was missing the logo
   image and described a removed `.github/workflows/build.yml` instead of
@@ -252,6 +300,33 @@ mechanical fix found; items still needing a human decision are marked
   AGPL-3.0 `LICENSE` file. Logo & branding and release-notes patch job were
   otherwise already fully wired (window icon, sidebar, packaged-binary
   icon, `release-electron.yml`'s `release-notes` job) — no gap there.
+- **2026-09-14 re-audit**, following 16 new commits since 2026-09-07 (HELOC
+  Reserves feature across 4 PRs, plus the same `second-instance` race fix
+  and `whenReady` lock-loser guard TrackDraft/FileShuttle got):
+  - [x] Confirmed PR #18 above is merged, not open — this file's prior
+    "draft" note was stale. Its fixes (theming re-vendor, license,
+    TODO/VERSION_BUMP.md, KVG_Standards docs pointer) are all live on
+    `main` and were unaffected by the recent feature commits.
+  - [x] **Application menu gap (flagged 2026-09-13, confirmed still
+    present)** — fixed in
+    [PR #30](https://github.com/gerp93/Sweeper/pull/30) (draft): ported
+    RolePlaymate/Bracketeer's `setupApplicationMenu`/`attachContextMenu`
+    pattern verbatim into a new `src/main/menu.ts` (View + Help only, macOS
+    app-name menu, right-click context menu for cut/copy/paste/select-all),
+    wired into `src/main/main.ts`. `tsc -p tsconfig.main.json --noEmit` and
+    `npm run build:electron` both verified clean; not launched interactively
+    (no display in this environment) — worth a quick manual click-through
+    before merging.
+  - [ ] **Electron version still `^28.0.0`** — confirmed stale per
+    `electron-versioning.md`, but that file explicitly defers Sweeper's
+    upgrade until after FileShuttle's 28→44 jump is validated as the live
+    test case. Not touched this pass; this is a documented, deliberate
+    hold, not a silently-skipped gap.
+  - [x] No other standards drift found in the 16 recent commits — the
+    HELOC Reserves feature (new IPC handlers, new DB table/service, new
+    Reserves nav page) and the instance-isolation/race-fix commits don't
+    touch theming, licensing, release/CI, update-check, DB location, logo,
+    or docs-pointer surfaces.
 
 ### KVG_Converter
 - [x] Added `visual-assault-tkinter` + a theme picker (`theming.py`,
@@ -458,6 +533,38 @@ mechanical fix found; items still needing a human decision are marked
   installer, plus `assets/logo.png`/`public/logo.png` for in-app branding
   and a checked-in `scripts/generate-icons.js`. Logo & branding is now
   fully compliant — no outstanding human decision here.
+- **2026-09-14 re-audit**, following PR #7 (merged 2026-09-11) and PR #8
+  (merged 2026-09-13):
+  - [x] Confirmed PR #7/#8 landed the real, complete pattern — not
+    partial. `src/main/main.ts` has `pinUserDataPath()` +
+    `app.setName('trackdraft')` at module load, `requestSingleInstanceLock()`
+    with a `process.exit(0)` fallback, an `appInitialized` guard on
+    `second-instance`, an explicit `if (!gotLock) return;` at the top of
+    the `app.whenReady()` callback, and the `getConfiguredDbPath()` /
+    missing-file dialog guard — matching Sweeper/FileShuttle's shape
+    exactly.
+  - [x] **Application menu gap (flagged 2026-09-13, confirmed still
+    present)** — fixed in
+    [PR #9](https://github.com/gerp93/TrackDraft/pull/9) (draft): ported
+    RolePlaymate/Bracketeer/Sweeper's `setupApplicationMenu`/
+    `attachContextMenu` pattern verbatim into a new `src/main/menu.ts`
+    (View + Help only, macOS app-name menu, right-click context menu for
+    cut/copy/paste/select-all), wired into `src/main/main.ts`.
+    `tsc -p tsconfig.main.json --noEmit` and `npm run build:electron` both
+    verified clean; not launched interactively (no display in this
+    environment) — worth a quick manual click-through before merging.
+  - [ ] **Electron version still `^28.0.0`** — confirmed stale per
+    `electron-versioning.md`, but that file explicitly defers TrackDraft's
+    upgrade until after FileShuttle's 28→44 jump (FileShuttle #18) is
+    validated as the live test case. Not touched this pass — a documented,
+    deliberate hold, not a silently-skipped gap. Note: TrackDraft uses
+    `sql.js` (not `node:sqlite`), but `electron-versioning.md`'s hold isn't
+    stack-specific — it's gated on FileShuttle's validation outcome, so
+    that doesn't change the calculus here.
+  - [x] No other standards drift found in the recent commits — release/CI,
+    theming, licensing, update-check, DB location, logo & branding,
+    `TODO.md`/`VERSION_BUMP.md`, and docs linking back to KVG_Standards all
+    remain compliant.
 
 ### RolePlaymate
 - **New repo, built 2026-08-17.** A character-writing notepad for AI chatbot

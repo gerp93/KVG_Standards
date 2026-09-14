@@ -30,7 +30,7 @@ That check has been skipped every run since; a human (or a session with
 | KVGrainy | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
 | KVGroove | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
 | gameshell-deploy (`gui/`) | Go/Wails GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
-| Sweeper | Electron GUI | Yes | Yes | Yes | No — still Electron's default menu bar (File/Edit/View/Window/Help, unfiltered); no `Menu.setApplicationMenu` call found in `src/main/` (checked 2026-09-13) | Yes | Yes | Yes | Yes | Yes |
+| Sweeper | Electron GUI | Yes | Yes | Yes | Fix opened 2026-09-14 — [PR #30](https://github.com/gerp93/Sweeper/pull/30) (draft), ports RolePlaymate/Bracketeer's `setupApplicationMenu`/`attachContextMenu` pattern into new `src/main/menu.ts` | Yes | Yes | Yes | Yes | Yes |
 | KVG_Converter | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
 | KVGenius | Flet GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | Yes | Yes |
 | KVGauge | Stream Deck plugin | TBD — needs a decision, see below | Yes | N/A by design | N/A — not Electron | N/A-shaped — plugin uses its own `manifest.json` icon conventions, not the generic checklist; already populated | Yes | Yes | N/A | Yes |
@@ -242,7 +242,9 @@ mechanical fix found; items still needing a human decision are marked
   See `db-location-versioning.md`'s expanded write-up and FileShuttle's
   REPO_SCOPE entry for the full mechanism.
 - [x] Re-checked newer standards (2026-08-07 audit), all now fixed in
-  [PR #18](https://github.com/gerp93/Sweeper/pull/18) (draft):
+  [PR #18](https://github.com/gerp93/Sweeper/pull/18) (**merged
+  2026-08-07** — corrected below; this file previously said "draft/open",
+  which was stale):
   neither `README.md` nor a `CLAUDE.md` mentioned KVG_Standards at all
   (violation of "docs must point back here"); README was missing the logo
   image and described a removed `.github/workflows/build.yml` instead of
@@ -252,6 +254,33 @@ mechanical fix found; items still needing a human decision are marked
   AGPL-3.0 `LICENSE` file. Logo & branding and release-notes patch job were
   otherwise already fully wired (window icon, sidebar, packaged-binary
   icon, `release-electron.yml`'s `release-notes` job) — no gap there.
+- **2026-09-14 re-audit**, following 16 new commits since 2026-09-07 (HELOC
+  Reserves feature across 4 PRs, plus the same `second-instance` race fix
+  and `whenReady` lock-loser guard TrackDraft/FileShuttle got):
+  - [x] Confirmed PR #18 above is merged, not open — this file's prior
+    "draft" note was stale. Its fixes (theming re-vendor, license,
+    TODO/VERSION_BUMP.md, KVG_Standards docs pointer) are all live on
+    `main` and were unaffected by the recent feature commits.
+  - [x] **Application menu gap (flagged 2026-09-13, confirmed still
+    present)** — fixed in
+    [PR #30](https://github.com/gerp93/Sweeper/pull/30) (draft): ported
+    RolePlaymate/Bracketeer's `setupApplicationMenu`/`attachContextMenu`
+    pattern verbatim into a new `src/main/menu.ts` (View + Help only, macOS
+    app-name menu, right-click context menu for cut/copy/paste/select-all),
+    wired into `src/main/main.ts`. `tsc -p tsconfig.main.json --noEmit` and
+    `npm run build:electron` both verified clean; not launched interactively
+    (no display in this environment) — worth a quick manual click-through
+    before merging.
+  - [ ] **Electron version still `^28.0.0`** — confirmed stale per
+    `electron-versioning.md`, but that file explicitly defers Sweeper's
+    upgrade until after FileShuttle's 28→44 jump is validated as the live
+    test case. Not touched this pass; this is a documented, deliberate
+    hold, not a silently-skipped gap.
+  - [x] No other standards drift found in the 16 recent commits — the
+    HELOC Reserves feature (new IPC handlers, new DB table/service, new
+    Reserves nav page) and the instance-isolation/race-fix commits don't
+    touch theming, licensing, release/CI, update-check, DB location, logo,
+    or docs-pointer surfaces.
 
 ### KVG_Converter
 - [x] Added `visual-assault-tkinter` + a theme picker (`theming.py`,

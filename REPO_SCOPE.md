@@ -37,7 +37,7 @@ That check has been skipped every run since; a human (or a session with
 | gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — not Electron | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
 | card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | N/A — not Electron | TBD — only a favicon, no `assets/logo.png`; low priority per web-app category | N/A — CI gate only, no release pipeline | N/A | N/A — uses MariaDB (server-side), not SQLite | Yes |
 | timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | N/A — not Electron | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
-| TrackDraft | Electron GUI | Yes | Yes | Yes | No — still Electron's default menu bar; no `Menu.setApplicationMenu` call found in `src/main/` (checked 2026-09-13) | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
+| TrackDraft | Electron GUI | Yes | Yes | Yes | Fix opened 2026-09-14 — [PR #9](https://github.com/gerp93/TrackDraft/pull/9) (draft), ports RolePlaymate/Bracketeer/Sweeper's `setupApplicationMenu`/`attachContextMenu` pattern into new `src/main/menu.ts` | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
 | RolePlaymate | Electron GUI | Yes | Yes | Yes | Yes — origin of the standard (`setupApplicationMenu`/`attachContextMenu` in `src/main/main.ts`); see `electron-menu.md` | TBD — no `assets/logo.png` at all; the in-app logo `<img>` tags degrade gracefully (hidden on load failure) rather than showing a broken image or a fabricated placeholder | Yes | Yes | Yes | Yes |
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | N/A — not Electron | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | N/A — not Electron | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
@@ -533,6 +533,38 @@ logging, a startup watchdog + its own follow-up fix, and the Electron
   installer, plus `assets/logo.png`/`public/logo.png` for in-app branding
   and a checked-in `scripts/generate-icons.js`. Logo & branding is now
   fully compliant — no outstanding human decision here.
+- **2026-09-14 re-audit**, following PR #7 (merged 2026-09-11) and PR #8
+  (merged 2026-09-13):
+  - [x] Confirmed PR #7/#8 landed the real, complete pattern — not
+    partial. `src/main/main.ts` has `pinUserDataPath()` +
+    `app.setName('trackdraft')` at module load, `requestSingleInstanceLock()`
+    with a `process.exit(0)` fallback, an `appInitialized` guard on
+    `second-instance`, an explicit `if (!gotLock) return;` at the top of
+    the `app.whenReady()` callback, and the `getConfiguredDbPath()` /
+    missing-file dialog guard — matching Sweeper/FileShuttle's shape
+    exactly.
+  - [x] **Application menu gap (flagged 2026-09-13, confirmed still
+    present)** — fixed in
+    [PR #9](https://github.com/gerp93/TrackDraft/pull/9) (draft): ported
+    RolePlaymate/Bracketeer/Sweeper's `setupApplicationMenu`/
+    `attachContextMenu` pattern verbatim into a new `src/main/menu.ts`
+    (View + Help only, macOS app-name menu, right-click context menu for
+    cut/copy/paste/select-all), wired into `src/main/main.ts`.
+    `tsc -p tsconfig.main.json --noEmit` and `npm run build:electron` both
+    verified clean; not launched interactively (no display in this
+    environment) — worth a quick manual click-through before merging.
+  - [ ] **Electron version still `^28.0.0`** — confirmed stale per
+    `electron-versioning.md`, but that file explicitly defers TrackDraft's
+    upgrade until after FileShuttle's 28→44 jump (FileShuttle #18) is
+    validated as the live test case. Not touched this pass — a documented,
+    deliberate hold, not a silently-skipped gap. Note: TrackDraft uses
+    `sql.js` (not `node:sqlite`), but `electron-versioning.md`'s hold isn't
+    stack-specific — it's gated on FileShuttle's validation outcome, so
+    that doesn't change the calculus here.
+  - [x] No other standards drift found in the recent commits — release/CI,
+    theming, licensing, update-check, DB location, logo & branding,
+    `TODO.md`/`VERSION_BUMP.md`, and docs linking back to KVG_Standards all
+    remain compliant.
 
 ### RolePlaymate
 - **New repo, built 2026-08-17.** A character-writing notepad for AI chatbot

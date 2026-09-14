@@ -314,6 +314,35 @@ reference implementation; summary:
   and FileShuttle are still on Electron's default menu — known drift, not
   yet fixed; see `REPO_SCOPE.md`'s "Application menu" column.
 
+## Electron version
+
+See `electron-versioning.md` for the full write-up; summary:
+
+- Pin `electron` to a reasonably current major version, checked against
+  `npm view electron version` at creation/audit time — **not** copied from
+  whatever an existing sibling repo's `package.json` happens to say. That
+  copy-an-existing-repo pattern is exactly how this drifted: FileShuttle and
+  Bracketeer were both created within weeks of the 2026-09-14 audit that
+  found this, and both still started life on Electron 28 (~Dec 2023,
+  2+ years stale) because that's what got copied forward.
+- Use a caret range on the major (`"electron": "^44.0.0"`), not an exact
+  pin — same reasoning as any other dependency here, just with no
+  KVG_Standards tag to pin to since `electron` is a normal upstream package.
+- **Violation to flag:** an Electron app pinned more than a couple of major
+  versions behind current — check explicitly, don't assume a recently
+  created app is automatically current.
+- **Violation to flag:** an exact-pinned Electron version with no `^`.
+- A major-version bump this large can carry real breaking changes
+  (sandboxing/context-isolation defaults, removed APIs, Node bumps
+  affecting native deps like `sql.js`/`better-sqlite3`/`node:sqlite`) —
+  treat it as its own PR with an actual test pass, not just a version-number
+  edit.
+- **Current known gap (2026-09-14):** Sweeper, TrackDraft, and Bracketeer
+  are still on Electron 28; RolePlaymate is on 35 (better, still not
+  current). FileShuttle is the only one being upgraded so far, as a live
+  test of whether a current Electron version affects an unreproducible
+  startup-hang investigation there — see its `REPO_SCOPE.md` entry.
+
 ## SQLite database location
 
 Applies to any app that stores its own data in a local SQLite file (not a

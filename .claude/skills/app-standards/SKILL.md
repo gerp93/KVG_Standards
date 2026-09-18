@@ -359,12 +359,18 @@ this).
     same copy-on-relocate behavior, parameterized for the new app's name.
 - A Settings UI should expose: the current path, "choose an existing
   file" (adopt as-is), "choose a new location" (copies the current
-  database there), and "reset to default" — then restart the app, since
-  an already-open database connection can't be pointed at a new path.
+  database there), "reset to default" — then restart the app, since
+  an already-open database connection can't be pointed at a new path —
+  and the current database file size, formatted in whichever unit
+  (KB/MB/GB) fits its size rather than a fixed unit or raw byte count.
 - **Violation to flag:** a SQLite-backed app with a hardcoded db path and
   no way for the user to relocate it (e.g. KVGenius's
   `chat_history.py: db_path: str = "./chat_history.db"` before this was
   fixed).
+- **Violation to flag:** a database-location Settings UI with no file-size
+  display next to the path — this is a new requirement (2026-09-17), so an
+  existing app that hasn't picked it up yet is known drift, not urgent, but
+  worth noting rather than silently skipping.
 
 ## Per-repo TODO.md
 

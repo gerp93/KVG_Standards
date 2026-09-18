@@ -89,7 +89,9 @@ Any app storing its own data in SQLite should let the user relocate that
 file (for backup/syncing), not hardcode a fixed path:
 [`packages/python/kvg_dblocation`](packages/python/kvg_dblocation) for
 Python apps. Electron apps follow Sweeper's `src/main/dbLocation.ts`
-directly as the reference pattern — see `db-location-versioning.md`.
+directly as the reference pattern. The Settings UI should also show the
+current database file size, formatted in whichever unit (KB/MB/GB) fits
+its size — see `db-location-versioning.md`.
 
 ## Electron application menu
 

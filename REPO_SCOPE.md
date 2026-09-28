@@ -9,11 +9,11 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 17 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 18 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
 timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
-FileShuttle, Bracketeer). VisualAssault is the theme producer, not a
-consumer. kvgrep and Valutique are excluded (no code yet).
+FileShuttle, Bracketeer, hArdpoInt). VisualAssault is the theme producer,
+not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
@@ -30,20 +30,21 @@ That check has been skipped every run since; a human (or a session with
 | KVGrainy | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
 | KVGroove | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
 | gameshell-deploy (`gui/`) | Go/Wails GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
-| Sweeper | Electron GUI | Yes | Yes | Yes | No — still Electron's default menu bar (File/Edit/View/Window/Help, unfiltered); no `Menu.setApplicationMenu` call found in `src/main/` (checked 2026-09-13) | Yes | Yes | Yes | Yes | Yes |
+| Sweeper | Electron GUI | Yes | Yes | Yes | Fix opened, not yet merged — [PR #58](https://github.com/gerp93/Sweeper/pull/58) (draft) adds `Menu.setApplicationMenu` (View+Help, dev tools gated behind `!app.isPackaged`) + a context-menu handler for cut/copy/paste/select-all; previously still on Electron's default menu bar (checked 2026-09-13, re-confirmed 2026-09-28). Needs manual smoke-test before merge (no Electron display in the audit environment). | Yes | Yes | Yes | Yes — now includes the file-size display next to the path | Yes |
 | KVG_Converter | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
-| KVGenius | Flet GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | Yes | Yes |
+| KVGenius | Electron GUI — **reclassified 2026-09-28**, see below | Yes | Yes | Yes | Yes — `src/main/menu.ts` matches the standard exactly (View+Help only, context-menu fallback) | TBD — still no `assets/logo.png`/`build/icon.png`; `main.ts`/`package.json` reference a `build/icon.png` that doesn't exist yet; TODO.md itself documents this and says not to fabricate artwork | Yes (inherits `release-electron.yml`'s patch job) | Yes | Yes — `src/main/dbLocation.ts`, now with file-size display ([PR #45](https://github.com/gerp93/KVGenius/pull/45)) | Yes |
 | KVGauge | Stream Deck plugin | TBD — needs a decision, see below | Yes | N/A by design | N/A — not Electron | N/A-shaped — plugin uses its own `manifest.json` icon conventions, not the generic checklist; already populated | Yes | Yes | N/A | Yes |
 | gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — not Electron | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
 | card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | N/A — not Electron | TBD — only a favicon, no `assets/logo.png`; low priority per web-app category | N/A — CI gate only, no release pipeline | N/A | N/A — uses MariaDB (server-side), not SQLite | Yes |
 | timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | N/A — not Electron | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
 | TrackDraft | Electron GUI | Yes | Yes | Yes | No — still Electron's default menu bar; no `Menu.setApplicationMenu` call found in `src/main/` (checked 2026-09-13) | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
-| RolePlaymate | Electron GUI | Yes | Yes | Yes | Yes — origin of the standard (`setupApplicationMenu`/`attachContextMenu` in `src/main/main.ts`); see `electron-menu.md` | TBD — no `assets/logo.png` at all; the in-app logo `<img>` tags degrade gracefully (hidden on load failure) rather than showing a broken image or a fabricated placeholder | Yes | Yes | Yes | Yes |
+| RolePlaymate | Electron GUI | Yes | Yes | Yes | Yes — origin of the standard (`setupApplicationMenu`/`attachContextMenu` in `src/main/main.ts`); see `electron-menu.md`. Re-verified 2026-09-28 intact after the group-chat DB migration. | TBD — no `assets/logo.png` at all; the in-app logo `<img>` tags degrade gracefully (hidden on load failure) rather than showing a broken image or a fabricated placeholder | Yes | Yes | Yes — now includes the file-size display next to the path ([PR #26](https://github.com/gerp93/RolePlaymate/pull/26)) | Yes |
 | airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | N/A — not Electron | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
 | KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | N/A — not Electron | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
 | radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | N/A — not Electron | TBD | TBD | TBD | N/A | No |
 | FileShuttle | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`) | Yes (AGPL-3.0) | Yes (`electron-updater`) | No — only a `Tray` context menu exists (`Menu.buildFromTemplate` for `tray.setContextMenu`); no `Menu.setApplicationMenu` call for the main window's menu bar (checked 2026-09-13) | Not re-checked this session | Not re-checked this session | Yes | Yes — see fix below | Yes |
 | Bracketeer | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`, same pattern as FileShuttle) | Yes (AGPL-3.0) | Yes — `electron-updater` wired in `src/main/main.ts` (`setupAutoUpdater`/`checkForUpdatesNow`), and (2026-09-13) actually surfaced in the Settings UI with a "Check for Updates" button, version display, and status messages — was previously wired but not exposed | Yes — added 2026-09-13, adopting the pattern from RolePlaymate (`src/main/menu.ts`); second adopter after RolePlaymate itself | TBD — no `assets/logo.png` at all; `scripts/generate-icons.js` exists and matches the standard Node/sharp script but has nothing to run against yet (its own header comment says so); gap is tracked in Bracketeer's own `TODO.md` | Yes — `auto-release.yml`/`cut-release.yml` both call `release-electron.yml@main`, which patches release notes automatically | Yes | Yes — `src/main/dbLocation.ts` follows Sweeper's reference pattern, Settings UI exposes current path/choose existing/choose new/reset | Yes |
+| hArdpoInt | Electron GUI — **new repo, added to scope 2026-09-28** | Yes — vendored via `scripts/update-visual-assault-css.sh`, pinned `v0.2.0` | Yes (AGPL-3.0, all deps checked clean) | Yes (`electron-updater`, silent check + Help-menu item) | Fix opened, not yet merged — [PR #1](https://github.com/gerp93/hArdpoInt/pull/1) (draft) adds the missing context-menu fallback for cut/copy/paste/select-all and gates dev-tools menu items behind `!app.isPackaged`; the View+Help template itself was already correct | Yes — full placement checklist verified (source mark, `scripts/generate-icons.js`, README image, in-app window icon, in-app UI usage, packaged-binary icon) | Yes (inherits `release-electron.yml`'s patch job) | Yes | N/A — no SQLite; persists a single JSON config file (`app-config.json` in Electron `userData`) with mount configs only | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -252,6 +253,26 @@ mechanical fix found; items still needing a human decision are marked
   AGPL-3.0 `LICENSE` file. Logo & branding and release-notes patch job were
   otherwise already fully wired (window icon, sidebar, packaged-binary
   icon, `release-electron.yml`'s `release-notes` job) — no gap there.
+- **2026-09-28 re-audit** (triggered by new commits since 2026-09-21, both
+  renderer chart/UI only — no menu or Electron-version changes):
+  re-confirmed theming, licensing, release/CI, update-check, db-location
+  (now also shows file size next to the path), VERSION_BUMP.md, TODO.md,
+  logo/branding, and docs-pointer all still compliant. Two gaps found:
+  - [x] **Fixed**: still no `Menu.setApplicationMenu` anywhere in
+    `src/main/` (the gap first flagged 2026-09-13) — opened
+    [PR #58](https://github.com/gerp93/Sweeper/pull/58) (draft), adding an
+    explicit View+Help template (dev tools gated behind `!app.isPackaged`,
+    zoom, fullscreen; Help has repo/issues links + version; macOS app-name
+    menu) plus a `context-menu` handler for cut/copy/paste/select-all,
+    following RolePlaymate's `src/main/main.ts` as the reference. Flagged
+    for manual smoke-test before merge — no Electron display available in
+    the audit environment.
+  - [ ] **Needs a human decision**: `package.json` still pins
+    `"electron": "^28.0.0"`; current upstream is `44.4.5` (16 majors
+    behind). Per `electron-versioning.md` this needs its own dedicated PR
+    with a real test pass (sandbox/context-isolation defaults, Node bump
+    affecting `sql.js`'s WASM runtime), not a version-string edit bundled
+    with other changes — not attempted here.
 
 ### KVG_Converter
 - [x] Added `visual-assault-tkinter` + a theme picker (`theming.py`,
@@ -319,6 +340,38 @@ mechanical fix found; items still needing a human decision are marked
 - **2026-08-17 re-audit**: only new commit was a test-only PR (214 unit
   tests added, no other files touched). Logo/branding gap and the dead-code
   duplicate tabs above are both unchanged.
+- **2026-09-28 re-audit — MAJOR: KVGenius was fully rewritten from
+  Flet/Python to Electron/TypeScript+React on 2026-09-19** ("Remove the
+  Flet app from main: KVGenius is being rebuilt on Electron" /
+  "Scaffold the Electron rewrite"), before the queue/batches/prompt-library/
+  favorites/time-estimates feature burst that triggered this re-audit. The
+  old Flet app is preserved on a `legacy-flet-app` branch; everything above
+  this entry describes the retired Flet app and is now historical only.
+  The dead-code duplicate-tabs note above is moot — there's no Python code
+  left. **Scope matrix category reclassified from "Flet GUI" to "Electron
+  GUI"** to match. Re-audited from scratch against the Electron checklist:
+  theming (VisualAssault CSS vendored in `src/renderer/themes.css`, pinned
+  `@v0.2.0`), release/CI (`auto-release.yml`+`cut-release.yml` →
+  `release-electron.yml@main`), update-check (`electron-updater` in
+  `main.ts`), Electron menu (`src/main/menu.ts` matches the standard:
+  View+Help only, context-menu fallback), SQLite location
+  (`src/main/dbLocation.ts`, Sweeper's reference pattern — every new
+  feature from the recent burst, including the new `timing_stats` table,
+  favorites-folder moves, and video serving, was checked and derives its
+  paths exclusively from `dbLocation.ts`'s getters, no new hardcoded
+  paths), licensing (AGPL-3.0, deps all permissive), docs (README/CLAUDE.md
+  both state the repo follows KVG_Standards as a whole), TODO.md/
+  VERSION_BUMP.md present and well-maintained — all compliant.
+  - [x] **Fixed**: the Database Location Settings panel had no file-size
+    display next to the path (standard added 2026-09-17) — wired `getDbInfo`
+    into a new `sizeBytes` field, rendered via the app's `formatBytes()`
+    util. [PR #45](https://github.com/gerp93/KVGenius/pull/45) (draft),
+    `npm run typecheck` verified clean.
+  - [ ] **Needs a human decision**: logo & branding gap carries over from
+    the Flet era, now against the new Electron surfaces — no
+    `assets/logo.png`, no `build/icon.png` (referenced by `main.ts`/
+    `package.json` but doesn't exist). TODO.md already documents this and
+    explicitly says not to fabricate artwork.
 
 ### KVGauge (Stream Deck plugin)
 - [ ] **Needs a decision, not just an implementation** on theming: does a
@@ -406,6 +459,8 @@ mechanical fix found; items still needing a human decision are marked
   `/gs/css/home.css` instead, suggests a copy-paste slip. Also:
   `CLAUDE.md`'s "Gameshell Framework split (in progress)" section is now
   stale post-tag and could use a rewrite once #12 lands.
+- **2026-09-28 re-audit**: no new commits since 2026-08-17 — skipped per
+  the standing "only re-check repos with recent activity" rule.
 
 ### gameshell-framework
 - [x] **2026-08-07 audit** — [PR #4](https://github.com/gerp93/gameshell-framework/pull/4)
@@ -458,6 +513,8 @@ mechanical fix found; items still needing a human decision are marked
   installer, plus `assets/logo.png`/`public/logo.png` for in-app branding
   and a checked-in `scripts/generate-icons.js`. Logo & branding is now
   fully compliant — no outstanding human decision here.
+- **2026-09-28 re-audit**: no new commits since 2026-09-13 — skipped per
+  the standing "only re-check repos with recent activity" rule.
 
 ### RolePlaymate
 - **New repo, built 2026-08-17.** A character-writing notepad for AI chatbot
@@ -511,6 +568,28 @@ mechanical fix found; items still needing a human decision are marked
   hides them rather than showing a broken image, so the app looks clean in
   the meantime — but the packaged-binary icon and window/taskbar icon are
   still unset.
+- **2026-09-28 re-audit** (triggered by new commits since 2026-09-21: a
+  Hardpoint-embed CSP fix — allowing the new companion app gerp93/hArdpoInt
+  to iframe into RolePlaymate — and a substantial "group chat" feature with
+  a DB migration making `scenarios` nullable-owner): re-verified the
+  Electron menu (`setupApplicationMenu`/`attachContextMenu`) and the
+  db-location pattern (`getEffectiveDbPath()`) were both untouched by the
+  migration — the migration operates on the already-open `db` handle and
+  doesn't hardcode any path. Theming, licensing, release/CI, update-check,
+  TODO.md/VERSION_BUMP.md, and docs-pointer all re-confirmed compliant.
+  - [x] **Fixed**: the Database Location Settings panel had no file-size
+    display next to the path (standard added 2026-09-17, same gap found in
+    KVGenius and Sweeper) — `dbLocation:get` now stats the file and returns
+    `sizeBytes`; `Settings.tsx` displays it next to "Current File".
+    [PR #26](https://github.com/gerp93/RolePlaymate/pull/26) (draft),
+    `tsc --noEmit` verified clean on both tsconfigs.
+  - [ ] **Needs a human decision** (logo gap, unchanged, see above).
+  - [ ] **Needs a human decision**: `electron-versioning.md` — still pinned
+    `^35.7.5`; current upstream is now `44.4.5` (9 majors behind, worse
+    than the "not current" framing from the last audit). Needs its own PR
+    with a real test pass per the standard's guidance (sandbox/
+    context-isolation defaults, Node bump affecting `node:sqlite`) — not
+    attempted here, same reasoning as Sweeper's open Electron-version gap.
 
 ### airport (Godot game)
 - [x] Release/CI: `auto-release.yml` + `cut-release.yml` both call
@@ -598,6 +677,8 @@ mechanical fix found; items still needing a human decision are marked
     `pyinstaller>=6.0.0`.
   - Repo is confirmed active (this was the first commit since 2025-10-18,
     and it's a substantial one) — dormancy question #3 below is answered.
+- **2026-09-28 re-audit**: no new commits since 2026-09-13 — skipped per
+  the standing "only re-check repos with recent activity" rule.
 
 ### radbot
 - **New repo, discovered 2026-08-17** (created 2026-08-13). Agentic control
@@ -637,6 +718,69 @@ mechanical fix found; items still needing a human decision are marked
   `uvicorn` — `httpx2` is an unusual package name next to those (`fastapi`/
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
+- **2026-09-28 re-audit**: no new commits since 2026-08-17 — skipped per
+  the standing "only re-check repos with recent activity" rule; the
+  category decision above is still open.
+
+### hArdpoInt
+- **New repo, discovered 2026-09-28** (created 2026-09-20). A standalone
+  Electron app — a local AI services dashboard (start/stop/monitor local
+  AI services like Ollama/Chatterbox/ComfyUI, GPU/CPU process monitoring)
+  that exposes a loopback HTTP API so other apps can iframe-embed its UI.
+  Ported out of a nested scaffold that originally lived inside
+  gerp93/RolePlaymate. Stack: Electron + Vite + React + TypeScript,
+  default branch `main`. Added to the scope matrix above as an Electron
+  GUI app, same category as Sweeper/TrackDraft/RolePlaymate/FileShuttle/
+  Bracketeer.
+- First-pass full audit (no prior REPO_SCOPE.md history to lean on):
+  - [x] Licensing: compliant. `LICENSE` = AGPL-3.0, matches
+    `package.json`. Dependencies checked individually (`npm view <pkg>
+    license`): react/react-dom/vite/electron-builder/electron-updater/
+    wait-on/concurrently = MIT, sharp/typescript = Apache-2.0. No
+    GPL-2.0-only or non-commercial deps.
+  - [x] Theming: compliant. `src/renderer/themes.css` vendored via
+    `scripts/update-visual-assault-css.sh`, pinned `v0.2.0` (current tag,
+    not `@main`).
+  - [x] Release/CI: compliant. Both `auto-release.yml` and
+    `cut-release.yml` present, both call `release-electron.yml@main`.
+    `VERSION_BUMP.md` present with real dated entries.
+  - [x] Update-check: compliant. `electron-updater` wired in
+    `src/main/main.ts` — silent launch check plus an in-app "Check for
+    Updates…" Help-menu item.
+  - [x] Windows installer: inherited via `release-electron.yml`/
+    electron-builder, nothing repo-local to check.
+  - [x] Logo & branding: compliant, every surface verified —
+    `assets/logo.png` source mark, `scripts/generate-icons.js` (sharp)
+    generates `build/icon.png` (installer), `assets/icon.png` (in-app
+    window icon via `BrowserWindow({icon})`), `public/logo.png` (in-app UI,
+    `Layout.tsx`); README has the logo before the H1; `package.json`'s
+    `build.icon` set for the packaged binary.
+  - [x] Release notes: compliant by inheritance via
+    `release-electron.yml@main`'s patch job.
+  - [x] TODO.md: present, correctly scoped as product backlog.
+  - [x] Docs → KVG_Standards: compliant. README.md, CLAUDE.md, and a
+    repo-local `REPO_SCOPE.md` all explicitly state the repo follows
+    KVG_Standards as a whole.
+  - N/A: SQLite database location — no SQLite anywhere; persistence is a
+    single JSON config file (`app-config.json` in Electron `userData`)
+    holding mount configs only, stateless/config-only, no relocate/adopt/
+    reset UI needed.
+  - [x] **Electron application menu — violation, fixed.**
+    `Menu.setApplicationMenu` was already used with a minimal View+Help
+    template (no File/Edit/Window) — good — but (a) dropping the Edit menu
+    had no `context-menu` handler, so cut/copy/paste/select-all were
+    unreachable anywhere in the app; (b) `reload`/`forceReload`/
+    `toggleDevTools` were not gated behind `!app.isPackaged` and would ship
+    in production builds. Both fixed —
+    [PR #1](https://github.com/gerp93/hArdpoInt/pull/1) (draft, branch
+    `audit/electron-menu-context-menu`), mirroring RolePlaymate's
+    `setupApplicationMenu`/`attachContextMenu` reference. `npm run
+    typecheck` verified clean.
+  - [ ] **Needs a human decision**: Electron version — pinned `^35.7.5`
+    (correct caret-range form) vs. current upstream `44.4.5`, ~9 majors
+    behind already at creation. Per `electron-versioning.md` this needs its
+    own dedicated PR with a real test pass, not a version-string edit — not
+    attempted here.
 
 ## Windows installer (new standard, 2026-09-01)
 
@@ -653,6 +797,13 @@ Electron consumers (Sweeper, TrackDraft, RolePlaymate) already ship a real
 installer via `electron-builder`, unaffected. Godot (`airport`) and the
 Stream Deck plugin (`KVGauge`) are deliberately excluded, same rationale as
 their existing theming/icon-gen exceptions.
+
+**2026-09-28 note:** KVGenius's Flet→Electron rewrite moves it out of this
+paragraph's "inherits Windows installer automatically" list (that was a
+Flet-era fact) and into the "Electron ships via electron-builder" bucket
+with Sweeper/TrackDraft/RolePlaymate/FileShuttle/Bracketeer/hArdpoInt —
+unaffected either way, just noting the list above is now stale for KVGenius
+specifically.
 
 ## Open questions (theming)
 
@@ -683,3 +834,15 @@ their existing theming/icon-gen exceptions.
 3. **Resolved.** Repo is confirmed active — the pywebview merge was a
    substantial commit landing the day after the prior audit flagged the
    ~10-month gap.
+
+## Open questions (Electron version)
+
+1. **New, 2026-09-28.** Three Electron repos now have an explicitly flagged
+   major-version gap needing a dedicated upgrade PR (not bundled with other
+   fixes, per `electron-versioning.md`): Sweeper (`^28.0.0` → current
+   `44.4.5`), RolePlaymate (`^35.7.5` → `44.4.5`), and the brand-new
+   hArdpoInt (`^35.7.5` at creation — already ~9 majors behind). TrackDraft
+   and Bracketeer were flagged on Electron 28 as of the 2026-09-14 audit
+   and haven't been re-checked this pass (no new commits). Worth a human
+   deciding whether to schedule a coordinated upgrade effort across all of
+   these rather than handling each ad hoc as its own re-audit turns it up.

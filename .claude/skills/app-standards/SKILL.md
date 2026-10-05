@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), Claude Code plugins/mods (version-less, marketplace-installed, validate+test CI), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -167,6 +167,7 @@ First classify the repo — the shape of "release" differs by category:
 | Go web app | Has a `Dockerfile`, deployed via [gameshell-deploy](https://github.com/gerp93/gameshell-deploy) / DigitalOcean App Platform | `templates/ci.yml` (build+vet) only. **No** GitHub-Release-binary workflow — deploy happens on push via DO's own GitHub integration, not a release artifact. If one exists, it's vestigial; remove it. |
 | Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-streamdeck.yml` for a Stream Deck plugin) |
 | Godot game | GDScript project (no C#/.NET), ships a native desktop export end users download | Same as Desktop GUI app/plugin, calling `release-godot.yml` — see `game-repos.md` for the full breakdown (theming and icon generation are not yet covered for this category). |
+| Claude Code plugin / mod | `.claude-plugin/plugin.json`; installed from the repo through a marketplace, no build artifact | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-claude-plugin.yml` (needs `plugin_name`), plus `templates/ci-claude-plugin.yml` as `ci.yml`. Omit `version` from the manifest and marketplace entry. Full rules: `claude-plugins.md` |
 | Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. This is the "New tech stacks" case above — ask the human before designing a new pattern. |
 
 Desktop GUI apps/plugins get **both** release triggers, not one or the
@@ -195,6 +196,31 @@ gives a real, reviewable diff instead of an empty commit — see KVGrainy's
   it belongs in `KVG_Standards` instead.
 - A repo with `auto-release.yml` but no `VERSION_BUMP.md`, or empty
   `git commit --allow-empty` commits used to force a release instead of it.
+
+## Claude Code plugins and mods
+
+Source of truth: [`claude-plugins.md`](https://github.com/gerp93/KVG_Standards/blob/main/claude-plugins.md).
+A plugin is installed from its repo through a marketplace, so most app standards
+don't apply (theming, installer, update-check, DB location, Electron items, logo
+placement are N/A).
+
+- **Layout**: `.claude-plugin/plugin.json`, a single-plugin `.claude-plugin/marketplace.json`
+  (`source: "./"`), and for a mod `hooks/hooks.json` + `hooks/register.tsx` + pure
+  logic files + `*.test.ts` (+ `types/index.d.ts` if it keeps `$.state`). README has an
+  Install section with the `marketplace add` / `install` commands.
+- **Versioning**: `version` is omitted from `plugin.json` and the marketplace entry, so
+  the commit is the version and every push is an update. **Violation to flag:** a pinned
+  `version` in a repo that has `auto-release.yml` (users would never see updates).
+  `claude plugin validate`'s missing-`version` warning is expected; no `--strict`.
+- **Release/CI**: both `auto-release.yml` and `cut-release.yml` calling
+  `release-claude-plugin.yml`, `VERSION_BUMP.md`, and `ci.yml` calling
+  `ci-claude-plugin.yml`. **Violation to flag:** a local copy of validate/test/release
+  logic instead of the reusable workflows; `claude plugin tag` or `<name>--vX` tags.
+- **Mod rules**: `$` is passed only to top-level functions in `register.tsx`; I/O is
+  injected into other files; autonomous behavior (`$.prompt.submit`) is opt-in, capped,
+  and any name interpolated into a prompt is allow-listed.
+- **Also required as for any repo**: AGPL-3.0 `LICENSE`, `TODO.md`, and docs that state
+  the repo follows KVG_Standards.
 
 ## Windows installer
 
@@ -453,7 +479,8 @@ When asked to check a repo against these standards:
    `release-flet.yml`), licensing, application menu (if it's Electron),
    logo & branding, release notes, `VERSION_BUMP.md`, database location
    (if it stores data in SQLite), `TODO.md`, and (if it's an in-scope
-   versioned app) 1.0 readiness against the checklists above.
+   versioned app) 1.0 readiness against the checklists above. For a Claude
+   Code plugin/mod, use the plugin section above instead of the app items.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo

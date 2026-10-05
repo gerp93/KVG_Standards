@@ -1,0 +1,63 @@
+name: CI (Claude Code plugin)
+
+# Reusable CI gate for Claude Code plugins, including mods (plugins whose code
+# registers function hooks). New variant (first consumer: Shipwatch).
+#
+# `claude plugin validate` reads the manifest and hooks module the way Claude
+# Code does and exits non-zero on an error; `claude plugin test` runs the
+# plugin's *.test.ts files and needs no session, sign-in or network. Warnings
+# (for example a deliberately omitted `version`, see claude-plugins.md) do not
+# fail the run, so don't add `--strict`.
+#
+# The CLI is installed from npm. `claude_code_version` defaults to `latest`
+# because the mods API is early access and moves between releases: a failure
+# here on a new release is the signal to adapt, which is the point of the gate.
+
+on:
+  workflow_call:
+    inputs:
+      plugin_dir:
+        description: 'Directory holding .claude-plugin/plugin.json, relative to the repo root'
+        required: false
+        type: string
+        default: '.'
+      node_version:
+        required: false
+        type: string
+        default: '22'
+      claude_code_version:
+        description: 'npm version or tag of @anthropic-ai/claude-code to install'
+        required: false
+        type: string
+        default: 'latest'
+
+permissions:
+  contents: read
+
+jobs:
+  validate-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Install the Claude Code CLI
+        env:
+          CLAUDE_CODE_VERSION: ${{ inputs.claude_code_version }}
+        run: |
+          set -e
+          npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+          claude --version
+
+      - name: Validate the plugin
+        env:
+          PLUGIN_DIR: ${{ inputs.plugin_dir }}
+        run: claude plugin validate "$PLUGIN_DIR"
+
+      - name: Run the plugin's tests
+        env:
+          PLUGIN_DIR: ${{ inputs.plugin_dir }}
+        run: claude plugin test "$PLUGIN_DIR"

@@ -15,6 +15,8 @@ timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
 FileShuttle, Bracketeer, hArdpoInt). VisualAssault is the theme producer,
 not a consumer. kvgrep and Valutique are excluded (no code yet).
 
+**Claude Code plugins** are a separate category with their own standard, [`claude-plugins.md`](claude-plugins.md), and aren't part of the 18-app matrix below. Tracked here: [Shipwatch](https://github.com/gerp93/Shipwatch) (mod; build/PR dashboard; wired 2026-10-05 — see its section at the end).
+
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
 its sweep, but has no GitHub tool available to it that reads or writes
@@ -1085,3 +1087,13 @@ specifically.
    and haven't been re-checked this pass (no new commits). Worth a human
    deciding whether to schedule a coordinated upgrade effort across all of
    these rather than handling each ad hoc as its own re-audit turns it up.
+
+## Claude Code plugins
+
+### Shipwatch
+- **New repo, 2026-10-05**, the first Claude Code plugin/mod under the standards. Version-less
+  (commit-as-version), single-plugin marketplace, `ci.yml` + `auto-release.yml` +
+  `cut-release.yml` calling the new `ci-claude-plugin.yml` / `release-claude-plugin.yml`,
+  `VERSION_BUMP.md`, `TODO.md`, AGPL-3.0, README states it follows KVG_Standards.
+- Not applicable by category: theming, installer, update-check, DB location, Electron items,
+  logo placement.

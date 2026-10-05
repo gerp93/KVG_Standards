@@ -366,6 +366,29 @@ mechanical fix found; items still needing a human decision are marked
   standards-relevant files touched. LICENSE, theming inheritance, and the
   TODO.md/KVG_Standards pointer from PR #3 (merged, not draft) all still
   intact.
+- **2026-08-24 re-audit**: substantial new feature work landed —
+  [PR #5](https://github.com/gerp93/timeline-trivia/pull/5) (timelines/
+  eras/per-timeline categories) and
+  [PR #6](https://github.com/gerp93/timeline-trivia/pull/6) (deck-creation
+  timeline prompt, `/decks` page override with a timeline column/filter,
+  JSON import matched by era abbreviation), plus a `gameshell-framework`
+  bump to v0.19.0 to pick up its new `DeckCreationHook` extension point.
+  No drift found. Theming: the new `timelines.html` and
+  `deck-list-timeline-fields.html` (new `/decks` timeline column/filter +
+  create-time picker) use only `var(--color-border, ...)` /
+  `var(--color-accent-red, ...)` — both real `gameshell-framework`
+  `colors.css` tokens, fallback values matching the framework's own
+  `chat.css` usage of the same pattern; no hand-rolled hex palette. No new
+  `.css` files touched by either PR. `go.mod` pinned to
+  `gameshell-framework v0.19.0` (real tag, no `replace`); `go build ./...`
+  and `go vet ./...` both pass clean. No new dependencies added. LICENSE,
+  TODO.md, and the README KVG_Standards pointer all still present. The
+  JSON import format change (era matched by abbreviation, not full name)
+  is documented in-app on the deck's Import Cards panel. Pre-existing,
+  unrelated note: `tests/theme-validator/go.mod` (separate module, not
+  touched by PR #5/#6) is still pinned to `gameshell-framework v0.3.0`
+  under its original `grantfbarnes/card-judge` module path — worth a
+  human look eventually, not new drift from this feature work.
 
 ### card-judge
 - Fork status checked: GitHub lists it as a fork of `GrantFBarnes/card-judge`
@@ -406,6 +429,29 @@ mechanical fix found; items still needing a human decision are marked
   `/gs/css/home.css` instead, suggests a copy-paste slip. Also:
   `CLAUDE.md`'s "Gameshell Framework split (in progress)" section is now
   stale post-tag and could use a rewrite once #12 lands.
+- **2026-08-24 re-audit**: only new commit since 08-17 was a
+  `gameshell-framework` bump to v0.19.0 (touches only `go.mod`/`go.sum`,
+  no CSS/template changes) — pin is clean, no `replace` directive, no
+  theming drift. PR #12 (still open, not draft) and PR #14 (still open,
+  draft) both unchanged and not stale/conflicting with each other. The
+  `stats.html` broken-CSS-link bug and stale `CLAUDE.md` framework-split
+  section from the 2026-08-17 note are both still present, still
+  unaddressed, left for a human as before.
+  **New finding, fixed**: CI (`ci / build`) has never actually passed on
+  this repo — every run back through v0.16.0 (2026-08-05) fails with
+  `undefined: database.SeedDevUsersIfEmpty`, a function that doesn't
+  exist anywhere in this repo's history or in gameshell-framework itself;
+  its own call site was already commented `TODO(remove-me) ... Flagged
+  for likely removal`. The 2026-08-07 audit's "CI compliant" finding
+  checked that `ci.yml` was wired correctly, not that it actually went
+  green. Fixed by removing the dead call and its now-unused `database`
+  import in `src/main.go` — `go build ./...`/`go vet ./...` clean, and
+  CI went green on the fix's own run (first successful run in this
+  repo's history). Draft PR:
+  [card-judge #15](https://github.com/gerp93/card-judge/pull/15)
+  (`fix/remove-undefined-seed-dev-users` → `f-framework-breakout`). Once
+  #15 merges, PR #12 (currently showing the same failure, since it's
+  built off `f-framework-breakout`) should go green too.
 
 ### gameshell-framework
 - [x] **2026-08-07 audit** — [PR #4](https://github.com/gerp93/gameshell-framework/pull/4)

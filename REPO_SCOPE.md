@@ -684,6 +684,43 @@ mechanical fix found; items still needing a human decision are marked
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
 
+### Bracketeer
+- **Created 2026-09-13** at [gerp93/Bracketeer](https://github.com/gerp93/Bracketeer)
+  (this doc recorded it as planned ahead of repo creation; now scaffolded
+  and largely built). A Roth IRA conversion planner for households
+  approaching or entering retirement — full year-by-year projection of a
+  household's federal + Minnesota tax, IRMAA, and Social Security
+  taxation under user-controlled conversion amounts. Calculates only,
+  does not recommend or optimize, in v1. Not distributed to the general
+  public; may be public on GitHub but not advertised.
+- **Category: Electron GUI** — fits the existing category cleanly, no new
+  standard was needed. `auto-release.yml` + `cut-release.yml` calling
+  `release-electron.yml`, `VERSION_BUMP.md`, `electron-updater` (following
+  Sweeper's `src/main/main.ts`), VisualAssault `themes.css` vendored @
+  `v0.2.0`, AGPL-3.0 `LICENSE`, SQLite via Sweeper's `src/main/dbLocation.ts`
+  pattern (scenarios stored locally, user-relocatable via the same
+  get/browseExisting/browseNew/set/resetToDefault IPC shape), and
+  `TODO.md`/`README.md`/`CLAUDE.md` all pointing back to KVG_Standards.
+- **Logo & branding gap, deliberate and tracked** (as of 2026-09-13; the
+  2026-10-05 1.0-readiness pass found `assets/logo.png` now exists on
+  `main` — the matrix cell above is not yet re-verified): no `assets/logo.png`
+  at the time, per explicit direction to defer it. `scripts/generate-icons.js` is
+  in place and every consuming surface (window icon, in-app usage,
+  packaged-binary icon) is already wired to read from it the moment a
+  source mark is added — same "TBD, not silently skipped" treatment as
+  other repos' outstanding logo gaps elsewhere in this doc.
+- **Release notes**: inherited automatically from `release-electron.yml`
+  (its `gh api` PATCH step already carries `body`/`generate_release_notes`)
+  — nothing for the app repo to do, same as every other consumer of that
+  reusable workflow.
+- Substantial engine work beyond standards compliance: a federal +
+  Minnesota tax engine (70 tests passing, including one hand-computed
+  end-to-end scenario), a year-by-year projection with the "widow's
+  penalty" filing-status switch modeled explicitly, and a marginal-rate
+  analyzer computed by finite difference on the real engine. Tax figures
+  are 2025 estimates not yet verified against MN DOR/IRS publications —
+  see the repo's own `TODO.md`, not a KVG_Standards concern.
+
 ## 1.0 readiness — first evaluation (2026-10-05)
 
 First pass against [`app-1-0-readiness.md`](app-1-0-readiness.md), run

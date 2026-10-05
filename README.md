@@ -89,7 +89,21 @@ Any app storing its own data in SQLite should let the user relocate that
 file (for backup/syncing), not hardcode a fixed path:
 [`packages/python/kvg_dblocation`](packages/python/kvg_dblocation) for
 Python apps. Electron apps follow Sweeper's `src/main/dbLocation.ts`
-directly as the reference pattern — see `db-location-versioning.md`.
+directly as the reference pattern. The Settings UI should also show the
+current database file size, formatted in whichever unit (KB/MB/GB) fits
+its size — see `db-location-versioning.md`.
+
+## Electron application menu
+
+Electron apps replace the noisy default menu bar (File/Edit/View/Window/Help,
+full of items that don't apply to a single-window, non-document app) with an
+explicit template keeping only View (dev tools gated behind
+`!app.isPackaged`, zoom, fullscreen) and Help (repo link, issues link,
+version) — plus a right-click context menu so dropping the Edit menu doesn't
+lose Cut/Copy/Paste/Select All. [gerp93/RolePlaymate](https://github.com/gerp93/RolePlaymate)
+(`src/main/main.ts`) is the reference implementation;
+[gerp93/Bracketeer](https://github.com/gerp93/Bracketeer) (`src/main/menu.ts`)
+is a smaller second example. See `electron-menu.md`.
 
 ## Logo & branding
 
@@ -118,6 +132,17 @@ skill's "Release notes" section.
 Every active app repo gets a `TODO.md` at its root (`templates/TODO.md`) —
 its own backlog of future features and fixes, separate from
 `REPO_SCOPE.md`'s standards-compliance tracking.
+
+## 1.0 readiness
+
+Version numbers can't tell you whether an app is ready for `1.0` —
+`auto-release.yml` bumps on every push, and a single `feat!:` commit jumps
+the major. [`app-1-0-readiness.md`](app-1-0-readiness.md) defines the bar
+instead: twelve pass/fail gates (seven computed from the repo and GitHub,
+five attested in a per-app `READINESS.md` copied from
+`templates/READINESS.md`), and five verdicts the audit reports per app
+(`PRE-1.0`, `READY-FOR-1.0`, `OK-1.0`, `PREMATURE-1.0`, `N/A`). First
+evaluation results are in `REPO_SCOPE.md`.
 
 ## Release workflow catalog
 

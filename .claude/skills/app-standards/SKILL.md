@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -359,12 +359,18 @@ this).
     same copy-on-relocate behavior, parameterized for the new app's name.
 - A Settings UI should expose: the current path, "choose an existing
   file" (adopt as-is), "choose a new location" (copies the current
-  database there), and "reset to default" — then restart the app, since
-  an already-open database connection can't be pointed at a new path.
+  database there), "reset to default" — then restart the app, since
+  an already-open database connection can't be pointed at a new path —
+  and the current database file size, formatted in whichever unit
+  (KB/MB/GB) fits its size rather than a fixed unit or raw byte count.
 - **Violation to flag:** a SQLite-backed app with a hardcoded db path and
   no way for the user to relocate it (e.g. KVGenius's
   `chat_history.py: db_path: str = "./chat_history.db"` before this was
   fixed).
+- **Violation to flag:** a database-location Settings UI with no file-size
+  display next to the path — this is a new requirement (2026-09-17), so an
+  existing app that hasn't picked it up yet is known drift, not urgent, but
+  worth noting rather than silently skipping.
 
 ## Per-repo TODO.md
 
@@ -374,6 +380,57 @@ fixes. This is **not** a KVG_Standards compliance list (that's
 `REPO_SCOPE.md`'s job) — it's product/feature backlog specific to that one
 app, maintained by whoever works on it.
 - **Violation to flag:** an active app repo with no `TODO.md` at all.
+
+## 1.0 readiness
+
+Applies to desktop GUI apps/plugins and Godot games (the same repos that
+get a versioned release pipeline). Not web apps, libraries, or repos with no
+approved category — report those `N/A`. See `app-1-0-readiness.md` for the
+full definition; this is the audit checklist.
+
+A version number says nothing about maturity here (`auto-release.yml` bumps
+on every push; a `feat!:` commit jumps the major). `1.0` means a
+compatibility promise on the on-disk data/schema, settings, and update
+channel — judge it against these gates, all of which must pass:
+
+- **Mechanical (compute these):**
+  - **M1** zero open `app-standards` violations, no `TBD` cells in the
+    app's `REPO_SCOPE.md` row, Electron within 1 major of
+    `npm view electron version`.
+  - **M2** first tagged release at least 90 days old.
+  - **M3** last 60 days: no breaking-marked commits (`type!:`/`BREAKING
+    CHANGE`) and no non-additive change to the compat-surface paths listed
+    in the app's `READINESS.md` (empty list or no file = fail).
+  - **M4** a workflow that runs the app's tests runs on push/PR, is green on
+    the default-branch head, and at least 90% green over the last 30 days.
+  - **M5** last 10 release runs succeeded; latest release has the full
+    asset set for every shipped OS.
+  - **M6** `TODO.md` has no open `## Fixes` items and nothing under any
+    `## Needs real-world verification` heading; no open `bug`/`data-loss`
+    issues. An empty `TODO.md` is **not** evidence of no known issues.
+  - **M7** no high/critical advisories in production dependencies.
+- **Attested (in the app's `READINESS.md`, from `templates/READINESS.md`):**
+  A1 upgrade path via the in-app updater on each OS, A2 automated
+  migration test, A3 missing/corrupt data path never silently creates an
+  empty DB, A4 30+ days of real use with no data loss, A5 README install/
+  usage/limitations. Valid only for the version named, and stale (failing)
+  if a compat-surface path changed after that version's tag.
+- **If a gate's data source isn't available to you** (Actions API,
+  Dependabot, issues): report it `NOT COMPUTABLE` — never guess, never
+  pass it silently — and list it separately from failing gates. An app
+  with any `NOT COMPUTABLE` gate can't be `READY-FOR-1.0`/`OK-1.0`.
+- **Report one state per in-scope app:** `PRE-1.0 (n/12)` (version `0.x`,
+  not all gates pass), `READY-FOR-1.0` (`0.x`, all pass — the signal to cut
+  `1.0.0` deliberately via `cut-release.yml`), `OK-1.0` (`>= 1.0`, all
+  pass), `PREMATURE-1.0` (`>= 1.0`, gates fail — informational, no
+  grandfathering), or `N/A`. List failing gates by number.
+- **Violation to flag:** an in-scope app at `>= 1.0` whose verdict is
+  `PREMATURE-1.0`.
+- **Don't flag** a `0.x` app for lacking `READINESS.md` — it just can't
+  pass the attested gates, so it's `PRE-1.0`. Don't create or fill one in
+  on the owner's behalf: the attestations are human sign-offs.
+- M4 requires *a* test-running workflow, not a specific one — there's no
+  shared Node/Python CI workflow yet (only `ci-go.yml`).
 
 ## Repo scope tracking
 
@@ -395,8 +452,8 @@ When asked to check a repo against these standards:
    ships a Windows build via `release-python-gui.yml`/`release-go-gui.yml`/
    `release-flet.yml`), licensing, application menu (if it's Electron),
    logo & branding, release notes, `VERSION_BUMP.md`, database location
-   (if it stores data in SQLite), and `TODO.md` against the checklists
-   above.
+   (if it stores data in SQLite), `TODO.md`, and (if it's an in-scope
+   versioned app) 1.0 readiness against the checklists above.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo

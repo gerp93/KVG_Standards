@@ -441,6 +441,29 @@ logging, a startup watchdog + its own follow-up fix, and the Electron
   standards-relevant files touched. LICENSE, theming inheritance, and the
   TODO.md/KVG_Standards pointer from PR #3 (merged, not draft) all still
   intact.
+- **2026-08-24 re-audit**: substantial new feature work landed —
+  [PR #5](https://github.com/gerp93/timeline-trivia/pull/5) (timelines/
+  eras/per-timeline categories) and
+  [PR #6](https://github.com/gerp93/timeline-trivia/pull/6) (deck-creation
+  timeline prompt, `/decks` page override with a timeline column/filter,
+  JSON import matched by era abbreviation), plus a `gameshell-framework`
+  bump to v0.19.0 to pick up its new `DeckCreationHook` extension point.
+  No drift found. Theming: the new `timelines.html` and
+  `deck-list-timeline-fields.html` (new `/decks` timeline column/filter +
+  create-time picker) use only `var(--color-border, ...)` /
+  `var(--color-accent-red, ...)` — both real `gameshell-framework`
+  `colors.css` tokens, fallback values matching the framework's own
+  `chat.css` usage of the same pattern; no hand-rolled hex palette. No new
+  `.css` files touched by either PR. `go.mod` pinned to
+  `gameshell-framework v0.19.0` (real tag, no `replace`); `go build ./...`
+  and `go vet ./...` both pass clean. No new dependencies added. LICENSE,
+  TODO.md, and the README KVG_Standards pointer all still present. The
+  JSON import format change (era matched by abbreviation, not full name)
+  is documented in-app on the deck's Import Cards panel. Pre-existing,
+  unrelated note: `tests/theme-validator/go.mod` (separate module, not
+  touched by PR #5/#6) is still pinned to `gameshell-framework v0.3.0`
+  under its original `grantfbarnes/card-judge` module path — worth a
+  human look eventually, not new drift from this feature work.
 
 ### card-judge
 - Fork status checked: GitHub lists it as a fork of `GrantFBarnes/card-judge`
@@ -481,6 +504,29 @@ logging, a startup watchdog + its own follow-up fix, and the Electron
   `/gs/css/home.css` instead, suggests a copy-paste slip. Also:
   `CLAUDE.md`'s "Gameshell Framework split (in progress)" section is now
   stale post-tag and could use a rewrite once #12 lands.
+- **2026-08-24 re-audit**: only new commit since 08-17 was a
+  `gameshell-framework` bump to v0.19.0 (touches only `go.mod`/`go.sum`,
+  no CSS/template changes) — pin is clean, no `replace` directive, no
+  theming drift. PR #12 (still open, not draft) and PR #14 (still open,
+  draft) both unchanged and not stale/conflicting with each other. The
+  `stats.html` broken-CSS-link bug and stale `CLAUDE.md` framework-split
+  section from the 2026-08-17 note are both still present, still
+  unaddressed, left for a human as before.
+  **New finding, fixed**: CI (`ci / build`) has never actually passed on
+  this repo — every run back through v0.16.0 (2026-08-05) fails with
+  `undefined: database.SeedDevUsersIfEmpty`, a function that doesn't
+  exist anywhere in this repo's history or in gameshell-framework itself;
+  its own call site was already commented `TODO(remove-me) ... Flagged
+  for likely removal`. The 2026-08-07 audit's "CI compliant" finding
+  checked that `ci.yml` was wired correctly, not that it actually went
+  green. Fixed by removing the dead call and its now-unused `database`
+  import in `src/main.go` — `go build ./...`/`go vet ./...` clean, and
+  CI went green on the fix's own run (first successful run in this
+  repo's history). Draft PR:
+  [card-judge #15](https://github.com/gerp93/card-judge/pull/15)
+  (`fix/remove-undefined-seed-dev-users` → `f-framework-breakout`). Once
+  #15 merges, PR #12 (currently showing the same failure, since it's
+  built off `f-framework-breakout`) should go green too.
 
 ### gameshell-framework
 - [x] **2026-08-07 audit** — [PR #4](https://github.com/gerp93/gameshell-framework/pull/4)
@@ -744,6 +790,92 @@ logging, a startup watchdog + its own follow-up fix, and the Electron
   `uvicorn` — `httpx2` is an unusual package name next to those (`fastapi`/
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
+
+### Bracketeer
+- **Created 2026-09-13** at [gerp93/Bracketeer](https://github.com/gerp93/Bracketeer)
+  (this doc recorded it as planned ahead of repo creation; now scaffolded
+  and largely built). A Roth IRA conversion planner for households
+  approaching or entering retirement — full year-by-year projection of a
+  household's federal + Minnesota tax, IRMAA, and Social Security
+  taxation under user-controlled conversion amounts. Calculates only,
+  does not recommend or optimize, in v1. Not distributed to the general
+  public; may be public on GitHub but not advertised.
+- **Category: Electron GUI** — fits the existing category cleanly, no new
+  standard was needed. `auto-release.yml` + `cut-release.yml` calling
+  `release-electron.yml`, `VERSION_BUMP.md`, `electron-updater` (following
+  Sweeper's `src/main/main.ts`), VisualAssault `themes.css` vendored @
+  `v0.2.0`, AGPL-3.0 `LICENSE`, SQLite via Sweeper's `src/main/dbLocation.ts`
+  pattern (scenarios stored locally, user-relocatable via the same
+  get/browseExisting/browseNew/set/resetToDefault IPC shape), and
+  `TODO.md`/`README.md`/`CLAUDE.md` all pointing back to KVG_Standards.
+- **Logo & branding gap, deliberate and tracked** (as of 2026-09-13; the
+  2026-10-05 1.0-readiness pass found `assets/logo.png` now exists on
+  `main` — the matrix cell above is not yet re-verified): no `assets/logo.png`
+  at the time, per explicit direction to defer it. `scripts/generate-icons.js` is
+  in place and every consuming surface (window icon, in-app usage,
+  packaged-binary icon) is already wired to read from it the moment a
+  source mark is added — same "TBD, not silently skipped" treatment as
+  other repos' outstanding logo gaps elsewhere in this doc.
+- **Release notes**: inherited automatically from `release-electron.yml`
+  (its `gh api` PATCH step already carries `body`/`generate_release_notes`)
+  — nothing for the app repo to do, same as every other consumer of that
+  reusable workflow.
+- Substantial engine work beyond standards compliance: a federal +
+  Minnesota tax engine (70 tests passing, including one hand-computed
+  end-to-end scenario), a year-by-year projection with the "widow's
+  penalty" filing-status switch modeled explicitly, and a marginal-rate
+  analyzer computed by finite difference on the real engine. Tax figures
+  are 2025 estimates not yet verified against MN DOR/IRS publications —
+  see the repo's own `TODO.md`, not a KVG_Standards concern.
+
+## 1.0 readiness — first evaluation (2026-10-05)
+
+First pass against [`app-1-0-readiness.md`](app-1-0-readiness.md), run
+when the standard was written. **Partial, not a full audit:** only M2 (age)
+and the presence of a test-running CI workflow (M4) were checked directly
+against GitHub; the rest of the "known gaps" column is carried over from
+this file's own matrix and notes, not re-verified; M3, M5, M6 (beyond a
+`TODO.md` read), M7, and all attested gates were not evaluated. Since no
+repo has a `READINESS.md` yet, **A1–A5 fail for every app, so none can be
+`READY-FOR-1.0` regardless of the rest** — the table shows how far each is
+from the mechanical gates, not a final score.
+
+Out of scope (`N/A`): card-judge, timeline-trivia (web apps),
+gameshell-framework (library), radbot (no approved category).
+
+| App | Latest | Verdict | Age (M2 needs 90d) | Test-running CI (M4) | Known gaps |
+|---|---|---|---|---|---|
+| KVGrainy | v1.0.12 | PREMATURE-1.0 | 63d — reaches 90d on 2026-11-01 | No CI workflow found | Closest to ready: last audit was clean, default-branch runs all green. Missing test CI and age. |
+| Sweeper | v1.0.56 | PREMATURE-1.0 | 68d | None; no test files found by file-name heuristic | Default Electron menu; Electron 28; `sql.js` data store |
+| KVGroove | v0.0.7 | PRE-1.0 | 304d (only app past 90d) | No CI workflow found | No logo; 2 of the last 4 default-branch runs failed |
+| gameshell-deploy | v0.1.30 | PRE-1.0 | 75d | No CI workflow found | No logo; default branch is `migration/control-plane-scripts`, not `main` |
+| KVG_Converter | v0.0.3 | PRE-1.0 | 61d | No CI workflow found | No logo; theming/updater never exercised on a real display |
+| KVGenius | v0.0.59 | PRE-1.0 | 61d | No CI workflow found (has a `test` script) | No logo; unresolved "Needs real-world verification" in `TODO.md` (M6) |
+| KVGauge | v0.0.2 | PRE-1.0 | 61d | Not checked | Theming scope decision still open |
+| airport | v0.0.4 | PRE-1.0 | 57d | Not checked | Theming/icon-gen not covered for Godot |
+| TrackDraft | v0.0.9 | PRE-1.0 | 59d | No CI workflow found | Default Electron menu; Electron 28 |
+| RolePlaymate | v0.0.48 | PRE-1.0 | 49d | Has `ci.yml` (contents not inspected); 2 of the last 8 runs failed | No logo; Electron 35 |
+| FileShuttle | v0.0.25 | PRE-1.0 | 47d | No CI workflow found | Default Electron menu (tray menu only) |
+| KVG_RGB | v0.3.2 | PRE-1.0 | 41d | No CI workflow found | No logo |
+| Bracketeer | v0.0.9 | PRE-1.0 | 22d | Has `ci.yml` (contents not inspected); `vitest` configured | Electron 28 |
+
+Things this pass surfaced that aren't 1.0 gates themselves:
+
+- **`REPO_SCOPE.md` is stale for KVGenius:** the matrix still lists it as a
+  Flet GUI, but its `package.json` is Electron (`^44.4.3`) now — the
+  category cell, and likely the update-check/theming/logo cells, need a
+  re-audit.
+- **`REPO_SCOPE.md`'s logo cell is stale for Bracketeer:** it says TBD, but
+  `assets/logo.png` exists on `main`.
+- **No shared workflow runs tests.** Every release workflow builds and
+  publishes without a test step, and the only reusable CI workflow is
+  `ci-go.yml`. A shared `ci-node.yml`/`ci-python.yml` would let M4 be
+  satisfied by one `uses:` line; that's a separate shared-API design, not
+  part of this standard.
+- **The routine that audits this is not in this repo** (it's a Claude
+  routine) and, per the tooling note at the top of this file, may lack
+  Actions/Dependabot/issues access. M4, M5, and M7 are the gates most
+  likely to be reported `NOT COMPUTABLE`.
 
 ## Windows installer (new standard, 2026-09-01)
 

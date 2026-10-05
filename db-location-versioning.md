@@ -175,6 +175,12 @@ The package only manages the path/config bookkeeping. Each app supplies:
   calling `set_db_path`/`reset_to_default_db_path`.
 - A Settings-UI section with the three actions (choose existing file,
   choose new location, reset to default) and a restart afterward.
+- Displaying the current database file size next to its path, formatted in
+  whichever unit fits the magnitude (KB/MB/GB) rather than a fixed unit or
+  raw byte count — e.g. `842 KB`, `4.1 MB`, `1.3 GB`. Read the size with a
+  plain filesystem stat call (`fs.statSync(path).size` in Node, `os.path.
+  getsize(path)` in Python) each time the Settings page is shown/refreshed;
+  no need to keep it live-updated while the page is open.
 
 See each package's README for a full wrapper example.
 

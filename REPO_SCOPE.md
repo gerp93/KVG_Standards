@@ -638,6 +638,55 @@ mechanical fix found; items still needing a human decision are marked
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
 
+## 1.0 readiness — first evaluation (2026-10-05)
+
+First pass against [`app-1-0-readiness.md`](app-1-0-readiness.md), run
+when the standard was written. **Partial, not a full audit:** only M2 (age)
+and the presence of a test-running CI workflow (M4) were checked directly
+against GitHub; the rest of the "known gaps" column is carried over from
+this file's own matrix and notes, not re-verified; M3, M5, M6 (beyond a
+`TODO.md` read), M7, and all attested gates were not evaluated. Since no
+repo has a `READINESS.md` yet, **A1–A5 fail for every app, so none can be
+`READY-FOR-1.0` regardless of the rest** — the table shows how far each is
+from the mechanical gates, not a final score.
+
+Out of scope (`N/A`): card-judge, timeline-trivia (web apps),
+gameshell-framework (library), radbot (no approved category).
+
+| App | Latest | Verdict | Age (M2 needs 90d) | Test-running CI (M4) | Known gaps |
+|---|---|---|---|---|---|
+| KVGrainy | v1.0.12 | PREMATURE-1.0 | 63d — reaches 90d on 2026-11-01 | No CI workflow found | Closest to ready: last audit was clean, default-branch runs all green. Missing test CI and age. |
+| Sweeper | v1.0.56 | PREMATURE-1.0 | 68d | None; no test files found by file-name heuristic | Default Electron menu; Electron 28; `sql.js` data store |
+| KVGroove | v0.0.7 | PRE-1.0 | 304d (only app past 90d) | No CI workflow found | No logo; 2 of the last 4 default-branch runs failed |
+| gameshell-deploy | v0.1.30 | PRE-1.0 | 75d | No CI workflow found | No logo; default branch is `migration/control-plane-scripts`, not `main` |
+| KVG_Converter | v0.0.3 | PRE-1.0 | 61d | No CI workflow found | No logo; theming/updater never exercised on a real display |
+| KVGenius | v0.0.59 | PRE-1.0 | 61d | No CI workflow found (has a `test` script) | No logo; unresolved "Needs real-world verification" in `TODO.md` (M6) |
+| KVGauge | v0.0.2 | PRE-1.0 | 61d | Not checked | Theming scope decision still open |
+| airport | v0.0.4 | PRE-1.0 | 57d | Not checked | Theming/icon-gen not covered for Godot |
+| TrackDraft | v0.0.9 | PRE-1.0 | 59d | No CI workflow found | Default Electron menu; Electron 28 |
+| RolePlaymate | v0.0.48 | PRE-1.0 | 49d | Has `ci.yml` (contents not inspected); 2 of the last 8 runs failed | No logo; Electron 35 |
+| FileShuttle | v0.0.25 | PRE-1.0 | 47d | No CI workflow found | Default Electron menu (tray menu only) |
+| KVG_RGB | v0.3.2 | PRE-1.0 | 41d | No CI workflow found | No logo |
+| Bracketeer | v0.0.9 | PRE-1.0 | 22d | Has `ci.yml` (contents not inspected); `vitest` configured | Electron 28 |
+
+Things this pass surfaced that aren't 1.0 gates themselves:
+
+- **`REPO_SCOPE.md` is stale for KVGenius:** the matrix still lists it as a
+  Flet GUI, but its `package.json` is Electron (`^44.4.3`) now — the
+  category cell, and likely the update-check/theming/logo cells, need a
+  re-audit.
+- **`REPO_SCOPE.md`'s logo cell is stale for Bracketeer:** it says TBD, but
+  `assets/logo.png` exists on `main`.
+- **No shared workflow runs tests.** Every release workflow builds and
+  publishes without a test step, and the only reusable CI workflow is
+  `ci-go.yml`. A shared `ci-node.yml`/`ci-python.yml` would let M4 be
+  satisfied by one `uses:` line; that's a separate shared-API design, not
+  part of this standard.
+- **The routine that audits this is not in this repo** (it's a Claude
+  routine) and, per the tooling note at the top of this file, may lack
+  Actions/Dependabot/issues access. M4, M5, and M7 are the gates most
+  likely to be reported `NOT COMPUTABLE`.
+
 ## Windows installer (new standard, 2026-09-01)
 
 `release-python-gui.yml`, `release-go-gui.yml`, and `release-flet.yml` now

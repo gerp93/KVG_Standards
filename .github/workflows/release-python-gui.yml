@@ -122,6 +122,20 @@ jobs:
           python -m PyInstaller --noconfirm --onefile "${WINDOWED_ARG[@]}" "${ICON_ARG[@]}" \
             --name "${{ inputs.app_name }}" "${ADD_DATA_ARGS[@]}" "${{ inputs.entry_point }}"
 
+      # PyInstaller's --onefile build leaves dist/ containing exactly the one
+      # exe, so it doubles as the installer's source_dir with no extra staging.
+      - name: Build Windows installer
+        if: runner.os == 'Windows'
+        uses: gerp93/KVG_Standards/.github/actions/windows-installer@main
+        with:
+          app_name: ${{ inputs.app_name }}
+          app_version: ${{ inputs.version }}
+          source_dir: dist
+          exe_name: ${{ inputs.app_name }}.exe
+          output_dir: installer_out
+          license_file: ${{ hashFiles('LICENSE') != '' && 'LICENSE' || '' }}
+          icon_file: ${{ inputs.icon_path != '' && format('{0}.ico', inputs.icon_path) || '' }}
+
       - name: Stage artifact
         shell: bash
         run: |
@@ -131,10 +145,23 @@ jobs:
           cp "dist/$DIST_NAME" "release_out/$ASSET_NAME"
           echo "ASSET_NAME=$ASSET_NAME" >> "$GITHUB_ENV"
 
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            INSTALLER_NAME="${{ inputs.app_name }}-windows-Setup.exe"
+            cp installer_out/*.exe "release_out/$INSTALLER_NAME"
+            echo "INSTALLER_NAME=$INSTALLER_NAME" >> "$GITHUB_ENV"
+          fi
+
       - uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ASSET_NAME }}
           path: release_out/${{ env.ASSET_NAME }}
+
+      - name: Upload installer artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.INSTALLER_NAME }}
+          path: release_out/${{ env.INSTALLER_NAME }}
 
   release:
     needs: build
@@ -159,9 +186,7 @@ jobs:
           body: |
             ## Installing
 
-            Download the build for your platform below and run it directly — no installer needed:
-
-            - **Windows** — `${{ inputs.app_name }}-windows.exe`
+            - **Windows** — download `${{ inputs.app_name }}-windows-Setup.exe` and run it (Start Menu shortcut, optional desktop icon, and a proper uninstaller in Add/Remove Programs). Prefer no installer? `${{ inputs.app_name }}-windows.exe` is the same build as a portable single file — just run it.
             - **macOS** — `${{ inputs.app_name }}-macos` (make it executable first: `chmod +x ${{ inputs.app_name }}-macos`)
             - **Linux** — `${{ inputs.app_name }}-linux` (make it executable first: `chmod +x ${{ inputs.app_name }}-linux`)
 

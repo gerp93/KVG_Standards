@@ -1,0 +1,150 @@
+name: 'Windows Installer (Inno Setup)'
+description: >
+  Packages a directory of Windows build output into a proper Setup.exe
+  installer via Inno Setup — Start Menu shortcuts, an optional desktop
+  icon, and an uninstaller registered in Add/Remove Programs. Windows-only;
+  callers must guard the step with a Windows-only `if:` and only invoke
+  this from a windows-latest job.
+
+inputs:
+  app_name:
+    description: 'Display name, e.g. KVGrainy'
+    required: true
+  app_version:
+    description: 'Version being released, e.g. v1.2.3 or 1.2.3 (a leading "v" is stripped automatically)'
+    required: true
+  source_dir:
+    description: 'Directory containing everything to install (the built exe plus any files it depends on) — copied into the install directory as-is'
+    required: true
+  exe_name:
+    description: 'Filename of the main executable inside source_dir, e.g. KVGrainy.exe — used for the Start Menu/desktop shortcuts and the post-install launch checkbox'
+    required: true
+  output_dir:
+    description: 'Directory to write the compiled Setup.exe into'
+    required: true
+  license_file:
+    description: 'Optional path to a plain-text license file, shown on an installer page before install'
+    required: false
+    default: ''
+  icon_file:
+    description: 'Optional path to a .ico file for the installer/uninstaller and shortcut icons'
+    required: false
+    default: ''
+  publisher:
+    description: 'Publisher name shown in installer metadata and Add/Remove Programs'
+    required: false
+    default: 'gerp93'
+  install_scope:
+    description: >
+      'perMachine' (default) installs to Program Files and requires admin
+      elevation, matching most desktop installers. 'perUser' installs to
+      %LOCALAPPDATA%\Programs\<app_name> with no elevation prompt — pick
+      this for an app that rewrites its own install directory at runtime
+      (e.g. a self-updater), since a perMachine install under Program Files
+      is not writable by an unelevated running process.
+    required: false
+    default: 'perMachine'
+  preserve_paths:
+    description: >
+      Space-separated top-level names inside source_dir (e.g. a data
+      directory the app writes to) that an upgrade/reinstall must never
+      overwrite. Seeded on first install, left completely untouched on
+      every install after that — even if source_dir ships a newer copy.
+    required: false
+    default: ''
+
+outputs:
+  installer_path:
+    description: 'Path to the compiled Setup.exe'
+    value: ${{ steps.compile.outputs.installer_path }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Install Inno Setup
+      shell: pwsh
+      run: choco install innosetup -y --no-progress
+
+    - name: Generate Inno Setup script
+      id: script
+      shell: pwsh
+      run: |
+        $template = Get-Content -Raw -Path "${{ github.action_path }}/installer.iss.template"
+
+        $version = '${{ inputs.app_version }}' -replace '^v', ''
+
+        $licenseLine = ''
+        if ('${{ inputs.license_file }}') {
+          $licenseLine = "LicenseFile=$((Resolve-Path '${{ inputs.license_file }}').Path)"
+        }
+
+        $iconLine = ''
+        if ('${{ inputs.icon_file }}') {
+          $iconLine = "SetupIconFile=$((Resolve-Path '${{ inputs.icon_file }}').Path)"
+        }
+
+        $perUser = '${{ inputs.install_scope }}' -eq 'perUser'
+        $defaultDir = if ($perUser) { '{localappdata}\Programs\{#MyAppName}' } else { '{autopf}\{#MyAppName}' }
+        $privilegesLine = if ($perUser) { 'PrivilegesRequired=lowest' } else { '' }
+
+        New-Item -ItemType Directory -Force -Path '${{ inputs.output_dir }}' | Out-Null
+        $sourceDirAbs = (Resolve-Path '${{ inputs.source_dir }}').Path
+        $outputDirAbs = (Resolve-Path '${{ inputs.output_dir }}').Path
+
+        $preservePaths = '${{ inputs.preserve_paths }}'.Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
+        $excludesClause = ''
+        $preserveBlock = ''
+        if ($preservePaths.Count -gt 0) {
+          # Each preserved path is dropped from the main recursive copy
+          # (which always overwrites) and re-added as its own [Files] entry
+          # with onlyifdoesntexist, so it's seeded on first install but
+          # never touched again — an upgrade must not clobber operator data
+          # living under source_dir (e.g. gameshell-deploy's games/). Uses
+          # $sourceDirAbs directly rather than the {{SOURCE_DIR}} token:
+          # this block is spliced into $script after that token has already
+          # been replaced (below), so the token itself would never get
+          # substituted here.
+          $excludeNames = $preservePaths | ForEach-Object { "$_,$_\*" }
+          $excludesClause = "; Excludes: `"$($excludeNames -join ',')`""
+          $preserveLines = $preservePaths | ForEach-Object {
+            "Source: `"$sourceDirAbs\$_\*`"; DestDir: `"{app}\$_`"; Flags: ignoreversion recursesubdirs createallsubdirs onlyifdoesntexist skipifsourcedoesntexist"
+          }
+          $preserveBlock = $preserveLines -join "`r`n"
+        }
+
+        # .Replace() is a literal string replace, not regex — safe against
+        # backslashes in the Windows paths being substituted in.
+        $script = $template.
+          Replace('{{APP_NAME}}', '${{ inputs.app_name }}').
+          Replace('{{APP_VERSION}}', $version).
+          Replace('{{PUBLISHER}}', '${{ inputs.publisher }}').
+          Replace('{{EXE_NAME}}', '${{ inputs.exe_name }}').
+          Replace('{{SOURCE_DIR}}', $sourceDirAbs).
+          Replace('{{OUTPUT_DIR}}', $outputDirAbs).
+          Replace('{{LICENSE_LINE}}', $licenseLine).
+          Replace('{{ICON_LINE}}', $iconLine).
+          Replace('{{DEFAULT_DIR}}', $defaultDir).
+          Replace('{{PRIVILEGES_LINE}}', $privilegesLine).
+          Replace('{{EXCLUDES_CLAUSE}}', $excludesClause).
+          Replace('{{PRESERVE_FILES_BLOCK}}', $preserveBlock)
+
+        $scriptPath = Join-Path $env:RUNNER_TEMP 'installer.iss'
+        Set-Content -Path $scriptPath -Value $script
+        echo "script_path=$scriptPath" >> $env:GITHUB_OUTPUT
+
+    - name: Compile installer
+      id: compile
+      shell: pwsh
+      run: |
+        # Hardcoded: choco's innosetup package installs the 32-bit compiler
+        # here by default; there is no 64-bit ISCC.exe variant to prefer.
+        $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+        & $iscc '${{ steps.script.outputs.script_path }}'
+        if ($LASTEXITCODE -ne 0) {
+          throw "ISCC.exe failed with exit code $LASTEXITCODE"
+        }
+        $installer = Get-ChildItem -Path '${{ inputs.output_dir }}' -Filter '*.exe' | Select-Object -First 1
+        if (-not $installer) {
+          throw "ISCC.exe reported success but no .exe was found in ${{ inputs.output_dir }}"
+        }
+        echo "installer_path=$($installer.FullName)" >> $env:GITHUB_OUTPUT

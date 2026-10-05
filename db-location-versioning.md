@@ -18,6 +18,122 @@ connection can't be pointed at a new path). See its `main.ts` for the
 Settings-UI wiring (`dbLocation:get`/`browseExisting`/`browseNew`/`set`/
 `resetToDefault` IPC handlers).
 
+## Instance isolation (required alongside the above)
+
+Electron apps here use `sql.js` — the whole database is loaded into memory
+once at startup and written back to disk with a full overwrite on every
+save (not a live, incrementally-written connection). That makes it
+dangerous for two processes to ever have the same db file open at once:
+whichever one saves last silently clobbers whatever the other one had,
+with no error and no merge. This isn't hypothetical — it's what actually
+happened to FileShuttle's mapping data (2026-09), traced back to exactly
+this. Every Electron app on this pattern needs all three of the following,
+not just the path bookkeeping above:
+
+1. **Dev and packaged builds must never resolve to the same userData
+   folder.** Don't rely on `app.setName(...)` alone to "pin" a shared
+   folder — Electron/Chromium can resolve its *native* default userData
+   directory from the running executable's own identity before your JS
+   even runs, so `electron.exe` (dev) and `YourApp.exe` (packaged) can
+   land in genuinely different folders on case-sensitive filesystems
+   (invisible on Windows/NTFS, real on Linux). The fix is to make dev
+   *intentionally* separate, not to chase making it match: call
+   `app.setPath('userData', ...)` yourself, synchronously, before anything
+   else touches `app.getPath('userData')` — pointing dev at a `<name>-dev`
+   sibling folder so it can never share a file with a packaged install:
+   ```ts
+   export function pinUserDataPath(): void {
+     const dirName = app.isPackaged ? 'yourapp' : 'yourapp-dev';
+     app.setPath('userData', path.join(app.getPath('appData'), dirName));
+   }
+   ```
+   Call `pinUserDataPath()` as the first thing in `main.ts`, before
+   `app.setName(...)` and before `app.whenReady()`.
+2. **`app.requestSingleInstanceLock()`**, so two copies of the *same*
+   build variant can't both hold the db open — the lock is scoped per
+   userData folder, so once (1) is in place this also can't cross-block
+   dev against packaged. `app.on('second-instance', ...)` should just
+   focus/restore the existing window instead of doing nothing.
+   **Also add a force-exit safety net on the losing side** — `app.quit()`
+   called on the loser (before `whenReady()`, since it never gets there)
+   has been directly observed leaving the process alive for hours instead
+   of actually exiting, rather than the few-hundred-ms it should take:
+   ```ts
+   if (!gotLock) {
+     app.quit();
+     setTimeout(() => process.exit(0), 1000);
+   }
+   ```
+   **The actual confirmed root cause of a real "my data disappeared"
+   incident (2026-09) lives here, not in path resolution**: `app.on(
+   'second-instance', ...)` is registered synchronously, active from the
+   moment the process starts — well before `app.whenReady()`'s callback
+   has finished `await initDatabase()` (loading the sql.js WASM engine
+   takes a moment). If a second launch attempt lands in that window, the
+   handler sees `mainWindow` as still `null` and creates a *second*
+   window immediately. That window's renderer boots and calls the API
+   before `registerIPCHandlers()` has run in the (still-starting) first
+   process, so every IPC call fails with "No handler registered for
+   ...", and nothing retries — the window is stuck forever showing
+   defaults (fallback theme, zero rows), even though the real database
+   was never touched and is completely fine. The original startup flow
+   finishes a moment later and creates its *own*, correctly-working
+   window — so both windows exist at once (this is also what a "two
+   taskbar icons for one app" report turns out to be). Every attempt to
+   diagnose this by inspecting the database or doing a clean single
+   launch will find nothing wrong, because nothing *is* wrong with the
+   data — reproducing it requires timing a second launch attempt against
+   the first one's own startup, which a live debugger session (caught
+   with the user's help, mid-incident) is what actually exposed it via
+   the DevTools console. Gate on an `appInitialized` flag set only after
+   `registerIPCHandlers()`/`createWindow()` have both run, and make
+   `second-instance` a no-op until then:
+   ```ts
+   let appInitialized = false;
+   app.on('second-instance', () => {
+     if (!appInitialized) return; // startup still in progress
+     showWindow();
+   });
+   // ...later, at the end of the whenReady callback:
+   registerIPCHandlers();
+   createWindow();
+   appInitialized = true;
+   ```
+   Verified (FileShuttle): 5 rapid-fire launches 60ms apart reliably
+   produced the orphaned-window/IPC-error state before this guard, and
+   consistently produced exactly one working window after it.
+3. **Never silently create a fresh empty database when a *configured*
+   custom path is missing** (drive unplugged, cloud-synced folder not
+   mounted yet). `initDatabase()`'s existing "create if the default path
+   doesn't exist" behavior is correct and expected for first run — but a
+   *user-chosen* path from `app-config.json` going missing means their
+   real data is probably still out there, unmounted; silently starting
+   fresh and then saving over nothing is how it looks "deleted." Check
+   before calling `initDatabase()`:
+   ```ts
+   const configuredDbPath = getConfiguredDbPath(); // raw override, no fallback
+   if (configuredDbPath && !fs.existsSync(configuredDbPath)) {
+     // show a dialog: Quit, or fall back to the default location
+   }
+   ```
+
+See Sweeper's and FileShuttle's `src/main/dbLocation.ts` (`pinUserDataPath`,
+`getConfiguredDbPath`) and `main.ts` (call order, the single-instance-lock
+block, the pre-`initDatabase` guard) for the concrete, current shape of all
+three.
+
+**Worth knowing:** RolePlaymate sidesteps the whole "whichever save wins"
+failure mode a different way — it uses Node's built-in `node:sqlite`
+(`DatabaseSync`, WAL mode, real incremental file writes) instead of
+`sql.js`, so there's no in-memory whole-file snapshot to clobber in the
+first place. The three items above are still required regardless of
+engine (a stale reader can still show wrong data, and two writers can
+still corrupt a WAL-mode file if nothing coordinates them), but a future
+new Electron app, or a deliberate migration of an existing one, should
+weigh `node:sqlite` over `sql.js` — this hasn't been decided as the
+default yet (see `REPO_SCOPE.md`'s RolePlaymate section), just flagged as
+real prior art.
+
 ## The packages
 
 | Package | For | Status |
@@ -59,6 +175,12 @@ The package only manages the path/config bookkeeping. Each app supplies:
   calling `set_db_path`/`reset_to_default_db_path`.
 - A Settings-UI section with the three actions (choose existing file,
   choose new location, reset to default) and a restart afterward.
+- Displaying the current database file size next to its path, formatted in
+  whichever unit fits the magnitude (KB/MB/GB) rather than a fixed unit or
+  raw byte count — e.g. `842 KB`, `4.1 MB`, `1.3 GB`. Read the size with a
+  plain filesystem stat call (`fs.statSync(path).size` in Node, `os.path.
+  getsize(path)` in Python) each time the Settings page is shown/refreshed;
+  no need to keep it live-updated while the page is open.
 
 See each package's README for a full wrapper example.
 

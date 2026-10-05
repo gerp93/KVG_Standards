@@ -41,10 +41,42 @@ repo's actual dependencies case by case (permissive/LGPL/GPL-or-later
 dependencies are fine; anything more restrictive is a real blocker) — see
 `licensing.md`.
 
+## Windows installer
+
+Any Windows build produced by `release-python-gui.yml`, `release-go-gui.yml`,
+or `release-flet.yml` also gets wrapped into a proper `Setup.exe` installer
+(Start Menu shortcut, optional desktop icon, uninstaller registered in Add/
+Remove Programs) via the
+[`windows-installer`](.github/actions/windows-installer) composite action —
+a shared Inno Setup script templated per app. The release still includes the
+plain portable exe/zip too; the installer is an additional download, not a
+replacement. Because these are reusable `workflow_call` workflows called by
+tag, every current and future consumer of the three workflows above picks
+this up automatically on its next release — no per-repo change needed.
+Electron apps already get a real installer from `electron-builder`
+(`release-electron.yml`), so this doesn't apply there; Godot
+(`release-godot.yml`) and the Stream Deck plugin workflow are excluded too —
+see `REPO_SCOPE.md` for why.
+
+Two workflow-level inputs (`windows_installer_scope`, defaulting to
+`perMachine`; `windows_installer_preserve_paths`, defaulting to none) pass
+straight through to the `windows-installer` action's `install_scope`/
+`preserve_paths` — see gameshell-deploy's `auto-release.yml`/`cut-release.yml`
+for the one case so far that needs them: an app that self-updates by
+rewriting its own install directory at runtime needs a `perUser` install
+(no admin elevation, so the unelevated running process can actually write
+there), and `preserve_paths` protects any operator-data directory the app
+ships a seed copy of (games/) from being clobbered on every reinstall.
+
+
+
 ## Update-check
 
-Self-update (check GitHub Releases, download, replace the running binary)
-is a shared component too, not something each app reinvents:
+Self-update (check GitHub Releases, download, replace the running build —
+the whole staged release package, not just the binary, so an app that
+ships scripts/templates/etc. alongside its executable doesn't drift out of
+sync with them) is a shared component too, not something each app
+reinvents:
 [`packages/python/kvg_updater`](packages/python/kvg_updater) (PyInstaller
 apps) and [`packages/go/kvgupdate`](packages/go/kvgupdate) (Wails/Go apps).
 Electron apps use `electron-updater` directly (see Sweeper's
@@ -57,7 +89,21 @@ Any app storing its own data in SQLite should let the user relocate that
 file (for backup/syncing), not hardcode a fixed path:
 [`packages/python/kvg_dblocation`](packages/python/kvg_dblocation) for
 Python apps. Electron apps follow Sweeper's `src/main/dbLocation.ts`
-directly as the reference pattern — see `db-location-versioning.md`.
+directly as the reference pattern. The Settings UI should also show the
+current database file size, formatted in whichever unit (KB/MB/GB) fits
+its size — see `db-location-versioning.md`.
+
+## Electron application menu
+
+Electron apps replace the noisy default menu bar (File/Edit/View/Window/Help,
+full of items that don't apply to a single-window, non-document app) with an
+explicit template keeping only View (dev tools gated behind
+`!app.isPackaged`, zoom, fullscreen) and Help (repo link, issues link,
+version) — plus a right-click context menu so dropping the Edit menu doesn't
+lose Cut/Copy/Paste/Select All. [gerp93/RolePlaymate](https://github.com/gerp93/RolePlaymate)
+(`src/main/main.ts`) is the reference implementation;
+[gerp93/Bracketeer](https://github.com/gerp93/Bracketeer) (`src/main/menu.ts`)
+is a smaller second example. See `electron-menu.md`.
 
 ## Logo & branding
 
@@ -86,6 +132,17 @@ skill's "Release notes" section.
 Every active app repo gets a `TODO.md` at its root (`templates/TODO.md`) —
 its own backlog of future features and fixes, separate from
 `REPO_SCOPE.md`'s standards-compliance tracking.
+
+## 1.0 readiness
+
+Version numbers can't tell you whether an app is ready for `1.0` —
+`auto-release.yml` bumps on every push, and a single `feat!:` commit jumps
+the major. [`app-1-0-readiness.md`](app-1-0-readiness.md) defines the bar
+instead: twelve pass/fail gates (seven computed from the repo and GitHub,
+five attested in a per-app `READINESS.md` copied from
+`templates/READINESS.md`), and five verdicts the audit reports per app
+(`PRE-1.0`, `READY-FOR-1.0`, `OK-1.0`, `PREMATURE-1.0`, `N/A`). First
+evaluation results are in `REPO_SCOPE.md`.
 
 ## Release workflow catalog
 

@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -9,7 +9,8 @@ Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards)
 This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
 `update-check-versioning.md` / `licensing.md` / `db-location-versioning.md`
-/ `game-repos.md` / `.github/workflows/` over anything cached here.
+/ `electron-menu.md` / `game-repos.md` / `.github/workflows/` over anything
+cached here.
 
 ## Docs must point back here
 
@@ -195,6 +196,47 @@ gives a real, reviewable diff instead of an empty commit — see KVGrainy's
 - A repo with `auto-release.yml` but no `VERSION_BUMP.md`, or empty
   `git commit --allow-empty` commits used to force a release instead of it.
 
+## Windows installer
+
+Applies to the same three stacks as `release-python-gui.yml`,
+`release-go-gui.yml`, and `release-flet.yml` — any Windows build from those
+workflows now also ships as a proper `Setup.exe` installer (Start Menu
+shortcut, optional desktop icon, uninstaller in Add/Remove Programs), built
+by the shared `windows-installer` composite action
+(`.github/actions/windows-installer`) wrapping Inno Setup. The portable
+exe/zip stays in the release too — the installer is additive.
+
+- This is inherited automatically by every consumer of those three reusable
+  workflows on their next release (they're called by tag, and the installer
+  step lives inside the workflow) — **don't flag a repo as non-compliant
+  just because it hasn't made a local change**; there's nothing for the app
+  repo to do. Only flag it if the repo's own release notes/README claim "no
+  installer, portable only" in a way that's now stale, or if it vendors a
+  hand-rolled Windows installer/packaging script instead of relying on this.
+- Electron apps are already compliant via `electron-builder`
+  (`release-electron.yml`) — not a gap, don't flag.
+- Godot (`release-godot.yml`) and the Stream Deck plugin workflow
+  (`release-streamdeck.yml`) are deliberately out of scope, same as
+  theming/icon-gen for Godot — see `game-repos.md`. Not a gap to flag.
+- **Violation to flag:** a Python/PyInstaller, Wails, or Flet GUI repo with
+  its own bespoke Windows installer/packaging script (Inno Setup, NSIS,
+  WiX, or otherwise) instead of relying on the shared workflow step — same
+  drift risk as a hand-rolled theme palette or a copy-pasted
+  `version_bump.sh`.
+- Two optional passthrough inputs, `windows_installer_scope` (default
+  `perMachine`) and `windows_installer_preserve_paths` (default none), cover
+  the one real per-repo variation: an app that self-updates by rewriting its
+  own install directory at runtime needs `perUser` (installs under
+  `%LOCALAPPDATA%\Programs`, no admin elevation — a `perMachine`/Program
+  Files install isn't writable by the unelevated running process), and
+  `preserve_paths` protects an operator-data directory the release also
+  ships a seed copy of from being overwritten on every reinstall/update
+  (gameshell-deploy sets `windows_installer_scope: perUser` and
+  `windows_installer_preserve_paths: games` for exactly this reason — see
+  its `auto-release.yml`/`cut-release.yml`). Don't flag a repo for setting
+  these; do flag one that needed `perUser` semantics and instead worked
+  around it with a bespoke installer script (the violation above).
+
 ## Update-check
 
 Applies to any repo in the "Desktop GUI app / plugin" category above that
@@ -244,6 +286,63 @@ Stream Deck plugin — see below).
   file or the Elgato Marketplace, not self-updated. Don't add update-check
   here without a specific reason to override that.
 
+## Electron application menu
+
+Applies to Electron GUI repos only (Sweeper, TrackDraft, RolePlaymate,
+Bracketeer, FileShuttle). See `electron-menu.md` for the full rule and
+reference implementation; summary:
+
+- No relying on Electron's default menu bar (File/Edit/View/Window/Help
+  with every stock item). Call `Menu.setApplicationMenu` with an explicit
+  template that keeps only View (dev tools gated behind
+  `!app.isPackaged`, zoom, fullscreen) and Help (repo link, issues link,
+  version), plus the macOS-only app-name menu on `darwin`.
+- Dropping the Edit menu needs a `context-menu` webContents handler
+  (cut/copy/paste/selectAll from `params.editFlags`) so those actions stay
+  reachable by right-click. [gerp93/RolePlaymate](https://github.com/gerp93/RolePlaymate)'s
+  `setupApplicationMenu`/`attachContextMenu` in `src/main/main.ts` is the
+  reference; [gerp93/Bracketeer](https://github.com/gerp93/Bracketeer)'s
+  `src/main/menu.ts` is a smaller second example.
+- **Violation to flag:** an Electron repo with no `Menu.setApplicationMenu`
+  call anywhere in `src/main/` (still on Electron's default menu).
+- **Violation to flag:** a custom menu that still ships File/Edit/Window
+  entries with no stated reason, or dev-only items
+  (`reload`/`forceReload`/`toggleDevTools`) not gated behind
+  `!app.isPackaged`.
+- **Current known gap (2026-09-13):** only RolePlaymate (origin) and
+  Bracketeer (adopted same session) currently do this. Sweeper, TrackDraft,
+  and FileShuttle are still on Electron's default menu — known drift, not
+  yet fixed; see `REPO_SCOPE.md`'s "Application menu" column.
+
+## Electron version
+
+See `electron-versioning.md` for the full write-up; summary:
+
+- Pin `electron` to a reasonably current major version, checked against
+  `npm view electron version` at creation/audit time — **not** copied from
+  whatever an existing sibling repo's `package.json` happens to say. That
+  copy-an-existing-repo pattern is exactly how this drifted: FileShuttle and
+  Bracketeer were both created within weeks of the 2026-09-14 audit that
+  found this, and both still started life on Electron 28 (~Dec 2023,
+  2+ years stale) because that's what got copied forward.
+- Use a caret range on the major (`"electron": "^44.0.0"`), not an exact
+  pin — same reasoning as any other dependency here, just with no
+  KVG_Standards tag to pin to since `electron` is a normal upstream package.
+- **Violation to flag:** an Electron app pinned more than a couple of major
+  versions behind current — check explicitly, don't assume a recently
+  created app is automatically current.
+- **Violation to flag:** an exact-pinned Electron version with no `^`.
+- A major-version bump this large can carry real breaking changes
+  (sandboxing/context-isolation defaults, removed APIs, Node bumps
+  affecting native deps like `sql.js`/`better-sqlite3`/`node:sqlite`) —
+  treat it as its own PR with an actual test pass, not just a version-number
+  edit.
+- **Current known gap (2026-09-14):** Sweeper, TrackDraft, and Bracketeer
+  are still on Electron 28; RolePlaymate is on 35 (better, still not
+  current). FileShuttle is the only one being upgraded so far, as a live
+  test of whether a current Electron version affects an unreproducible
+  startup-hang investigation there — see its `REPO_SCOPE.md` entry.
+
 ## SQLite database location
 
 Applies to any app that stores its own data in a local SQLite file (not a
@@ -260,12 +359,18 @@ this).
     same copy-on-relocate behavior, parameterized for the new app's name.
 - A Settings UI should expose: the current path, "choose an existing
   file" (adopt as-is), "choose a new location" (copies the current
-  database there), and "reset to default" — then restart the app, since
-  an already-open database connection can't be pointed at a new path.
+  database there), "reset to default" — then restart the app, since
+  an already-open database connection can't be pointed at a new path —
+  and the current database file size, formatted in whichever unit
+  (KB/MB/GB) fits its size rather than a fixed unit or raw byte count.
 - **Violation to flag:** a SQLite-backed app with a hardcoded db path and
   no way for the user to relocate it (e.g. KVGenius's
   `chat_history.py: db_path: str = "./chat_history.db"` before this was
   fixed).
+- **Violation to flag:** a database-location Settings UI with no file-size
+  display next to the path — this is a new requirement (2026-09-17), so an
+  existing app that hasn't picked it up yet is known drift, not urgent, but
+  worth noting rather than silently skipping.
 
 ## Per-repo TODO.md
 
@@ -275,6 +380,57 @@ fixes. This is **not** a KVG_Standards compliance list (that's
 `REPO_SCOPE.md`'s job) — it's product/feature backlog specific to that one
 app, maintained by whoever works on it.
 - **Violation to flag:** an active app repo with no `TODO.md` at all.
+
+## 1.0 readiness
+
+Applies to desktop GUI apps/plugins and Godot games (the same repos that
+get a versioned release pipeline). Not web apps, libraries, or repos with no
+approved category — report those `N/A`. See `app-1-0-readiness.md` for the
+full definition; this is the audit checklist.
+
+A version number says nothing about maturity here (`auto-release.yml` bumps
+on every push; a `feat!:` commit jumps the major). `1.0` means a
+compatibility promise on the on-disk data/schema, settings, and update
+channel — judge it against these gates, all of which must pass:
+
+- **Mechanical (compute these):**
+  - **M1** zero open `app-standards` violations, no `TBD` cells in the
+    app's `REPO_SCOPE.md` row, Electron within 1 major of
+    `npm view electron version`.
+  - **M2** first tagged release at least 90 days old.
+  - **M3** last 60 days: no breaking-marked commits (`type!:`/`BREAKING
+    CHANGE`) and no non-additive change to the compat-surface paths listed
+    in the app's `READINESS.md` (empty list or no file = fail).
+  - **M4** a workflow that runs the app's tests runs on push/PR, is green on
+    the default-branch head, and at least 90% green over the last 30 days.
+  - **M5** last 10 release runs succeeded; latest release has the full
+    asset set for every shipped OS.
+  - **M6** `TODO.md` has no open `## Fixes` items and nothing under any
+    `## Needs real-world verification` heading; no open `bug`/`data-loss`
+    issues. An empty `TODO.md` is **not** evidence of no known issues.
+  - **M7** no high/critical advisories in production dependencies.
+- **Attested (in the app's `READINESS.md`, from `templates/READINESS.md`):**
+  A1 upgrade path via the in-app updater on each OS, A2 automated
+  migration test, A3 missing/corrupt data path never silently creates an
+  empty DB, A4 30+ days of real use with no data loss, A5 README install/
+  usage/limitations. Valid only for the version named, and stale (failing)
+  if a compat-surface path changed after that version's tag.
+- **If a gate's data source isn't available to you** (Actions API,
+  Dependabot, issues): report it `NOT COMPUTABLE` — never guess, never
+  pass it silently — and list it separately from failing gates. An app
+  with any `NOT COMPUTABLE` gate can't be `READY-FOR-1.0`/`OK-1.0`.
+- **Report one state per in-scope app:** `PRE-1.0 (n/12)` (version `0.x`,
+  not all gates pass), `READY-FOR-1.0` (`0.x`, all pass — the signal to cut
+  `1.0.0` deliberately via `cut-release.yml`), `OK-1.0` (`>= 1.0`, all
+  pass), `PREMATURE-1.0` (`>= 1.0`, gates fail — informational, no
+  grandfathering), or `N/A`. List failing gates by number.
+- **Violation to flag:** an in-scope app at `>= 1.0` whose verdict is
+  `PREMATURE-1.0`.
+- **Don't flag** a `0.x` app for lacking `READINESS.md` — it just can't
+  pass the attested gates, so it's `PRE-1.0`. Don't create or fill one in
+  on the owner's behalf: the attestations are human sign-offs.
+- M4 requires *a* test-running workflow, not a specific one — there's no
+  shared Node/Python CI workflow yet (only `ci-go.yml`).
 
 ## Repo scope tracking
 
@@ -292,9 +448,12 @@ When asked to check a repo against these standards:
 1. Identify its category from the table above (cross-check against
    `REPO_SCOPE.md` — add the repo there if it's missing).
 2. Check theming (if it has a UI), release/CI pipeline, update-check
-   (if it ships a binary end users run directly), licensing, logo &
-   branding, release notes, `VERSION_BUMP.md`, database location (if it
-   stores data in SQLite), and `TODO.md` against the checklists above.
+   (if it ships a binary end users run directly), Windows installer (if it
+   ships a Windows build via `release-python-gui.yml`/`release-go-gui.yml`/
+   `release-flet.yml`), licensing, application menu (if it's Electron),
+   logo & branding, release notes, `VERSION_BUMP.md`, database location
+   (if it stores data in SQLite), `TODO.md`, and (if it's an in-scope
+   versioned app) 1.0 readiness against the checklists above.
 3. List every deviation found — don't silently fix anything in an audit-only
    pass.
 4. When asked to bring it into compliance, land it as its own PR per repo

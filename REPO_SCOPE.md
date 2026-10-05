@@ -9,11 +9,11 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 16 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 17 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
 timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
-FileShuttle). VisualAssault is the theme producer, not a consumer. kvgrep
-and Valutique are excluded (no code yet).
+FileShuttle, Bracketeer). VisualAssault is the theme producer, not a
+consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
@@ -25,24 +25,25 @@ That check has been skipped every run since; a human (or a session with
 
 ## Scope matrix
 
-| Repo | Category | Theming | Licensing | Update-check | Logo & branding | Release notes | VERSION_BUMP.md | DB location | TODO.md |
-|---|---|---|---|---|---|---|---|---|---|
-| KVGrainy | Python/PyInstaller GUI | Yes | Yes | Yes | Yes | Yes | Yes | N/A | Yes |
-| KVGroove | Python/PyInstaller GUI | Yes | Yes | Yes | Yes | Yes | Yes | N/A | Yes |
-| gameshell-deploy (`gui/`) | Go/Wails GUI | Yes | Yes | Yes | Yes | Yes | Yes | N/A | Yes |
-| Sweeper | Electron GUI | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| KVG_Converter | Python/PyInstaller GUI | Yes | Yes | Yes | Yes | Yes | Yes | N/A | Yes |
-| KVGenius | Flet GUI | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
-| KVGauge | Stream Deck plugin | TBD — needs a decision, see below | Yes | N/A by design | N/A-shaped — plugin uses its own `manifest.json` icon conventions, not the generic checklist; already populated | Yes | Yes | N/A | Yes |
-| gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
-| card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | TBD — only a favicon, no `assets/logo.png`; low priority per web-app category | N/A — CI gate only, no release pipeline | N/A | N/A — uses MariaDB (server-side), not SQLite | Yes |
-| timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
-| TrackDraft | Electron GUI | Yes | Yes | Yes | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
-| RolePlaymate | Electron GUI | Yes | Yes | Yes | TBD — no `assets/logo.png` at all; the in-app logo `<img>` tags degrade gracefully (hidden on load failure) rather than showing a broken image or a fabricated placeholder | Yes | Yes | Yes | Yes |
-| airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
-| KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
-| radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | TBD | TBD | TBD | N/A | No |
-| FileShuttle | Flet GUI | Yes | Yes | Yes | Yes | Yes | Yes | Yes | Yes |
+| Repo | Category | Theming | Licensing | Update-check | Application menu | Logo & branding | Release notes | VERSION_BUMP.md | DB location | TODO.md |
+|---|---|---|---|---|---|---|---|---|---|---|
+| KVGrainy | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
+| KVGroove | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
+| gameshell-deploy (`gui/`) | Go/Wails GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
+| Sweeper | Electron GUI | Yes | Yes | Yes | No — still Electron's default menu bar (File/Edit/View/Window/Help, unfiltered); no `Menu.setApplicationMenu` call found in `src/main/` (checked 2026-09-13) | Yes | Yes | Yes | Yes | Yes |
+| KVG_Converter | Python/PyInstaller GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | N/A | Yes |
+| KVGenius | Flet GUI | Yes | Yes | Yes | N/A — not Electron | Yes | Yes | Yes | Yes | Yes |
+| KVGauge | Stream Deck plugin | TBD — needs a decision, see below | Yes | N/A by design | N/A — not Electron | N/A-shaped — plugin uses its own `manifest.json` icon conventions, not the generic checklist; already populated | Yes | Yes | N/A | Yes |
+| gameshell-framework | Go library | Yes (vendored CSS, covers card-judge + timeline-trivia) | Yes | N/A | N/A — not Electron | N/A — library, no shipped app surface | N/A — tag-only release, no build | N/A | N/A | Yes |
+| card-judge | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A — deployed via DO push, no client binary | N/A — not Electron | TBD — only a favicon, no `assets/logo.png`; low priority per web-app category | N/A — CI gate only, no release pipeline | N/A | N/A — uses MariaDB (server-side), not SQLite | Yes |
+| timeline-trivia | Go web app | Yes (inherits from gameshell-framework) | Yes | N/A | N/A — not Electron | TBD — no `assets/logo.png`/README hero image, only a `favicon.png`; low priority per web-app category | N/A | N/A | N/A — uses MariaDB (server-side, `go-sql-driver/mysql`), not SQLite | Yes |
+| TrackDraft | Electron GUI | Yes | Yes | Yes | No — still Electron's default menu bar; no `Menu.setApplicationMenu` call found in `src/main/` (checked 2026-09-13) | Yes — resolved 2026-08-15, see below | Yes | Yes | Yes | Yes |
+| RolePlaymate | Electron GUI | Yes | Yes | Yes | Yes — origin of the standard (`setupApplicationMenu`/`attachContextMenu` in `src/main/main.ts`); see `electron-menu.md` | TBD — no `assets/logo.png` at all; the in-app logo `<img>` tags degrade gracefully (hidden on load failure) rather than showing a broken image or a fabricated placeholder | Yes | Yes | Yes | Yes |
+| airport | Godot game | Not yet covered (see `game-repos.md`) | Yes | Yes (`packages/godot/kvg_update`, vendored, notify-only) | N/A — not Electron | Not yet covered (see `game-repos.md`) | Yes | Yes | N/A | Yes |
+| KVG_RGB | Python CLI + pywebview desktop GUI (Flask embedded as local content layer) — now effectively Python/PyInstaller GUI-shaped, see below | Yes — VisualAssault vendored 2026-08-15 | Yes — LICENSE (AGPL-3.0) added 2026-08-15 | Yes — `kvg_updater` wrapper added 2026-08-15 | N/A — not Electron | TBD — still no logo/icon assets anywhere | Yes — `release-python-gui.yml` wired 2026-08-15 | Yes — added 2026-08-15 | Yes — `kvg_dblocation` wired 2026-08-15 | Yes (predates template, but present) |
+| radbot | Python hardware/robotics control stack (Pi + simulator) — no existing category match, see below | TBD | TBD | TBD | N/A — not Electron | TBD | TBD | TBD | N/A | No |
+| FileShuttle | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`) | Yes (AGPL-3.0) | Yes (`electron-updater`) | No — only a `Tray` context menu exists (`Menu.buildFromTemplate` for `tray.setContextMenu`); no `Menu.setApplicationMenu` call for the main window's menu bar (checked 2026-09-13) | Not re-checked this session | Not re-checked this session | Yes | Yes — see fix below | Yes |
+| Bracketeer | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`, same pattern as FileShuttle) | Yes (AGPL-3.0) | Yes — `electron-updater` wired in `src/main/main.ts` (`setupAutoUpdater`/`checkForUpdatesNow`), and (2026-09-13) actually surfaced in the Settings UI with a "Check for Updates" button, version display, and status messages — was previously wired but not exposed | Yes — added 2026-09-13, adopting the pattern from RolePlaymate (`src/main/menu.ts`); second adopter after RolePlaymate itself | TBD — no `assets/logo.png` at all; `scripts/generate-icons.js` exists and matches the standard Node/sharp script but has nothing to run against yet (its own header comment says so); gap is tracked in Bracketeer's own `TODO.md` | Yes — `auto-release.yml`/`cut-release.yml` both call `release-electron.yml@main`, which patches release notes automatically | Yes | Yes — `src/main/dbLocation.ts` follows Sweeper's reference pattern, Settings UI exposes current path/choose existing/choose new/reset | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -139,6 +140,74 @@ mechanical fix found; items still needing a human decision are marked
   Also still true: the repo's default branch remains
   `migration/control-plane-scripts` rather than `main`, unusual this long
   after the stated migration. Needs a real source mark, not fabricated.
+- **2026-09-04**: Root-caused and fixed the self-update bug that had been
+  silently re-swapping the GUI binary on every "Check for Update" click
+  while `create.sh`/`delete.sh`/`templates/` underneath it drifted further
+  out of date — two compounding causes, both fixed on the KVG_Standards
+  side (the version-stamping gap noted above, plus the deeper one it was
+  masking): `release-go-gui.yml` never stamped `main.appVersion`, so a
+  built binary always reported the zero value, which `kvgupdate` parses as
+  lower than any real release — `CheckForUpdate` reported an update
+  "available" unconditionally, even when already current; and
+  `ApplyUpdateAndRestart` only ever replaced the executable, discarding
+  the rest of the staged download (`DownloadAndExtract` had already
+  fetched it in full). `release-go-gui.yml` now passes
+  `-ldflags "-X main.appVersion=..."`, and `ApplyUpdateAndRestart` now
+  takes a `targetDir` + `preserve` list and syncs everything staged except
+  the running binary and preserved paths into `targetDir` — gameshell-deploy
+  passes its OpsDir and preserves `games/`. Also added a real Windows
+  installer (`Setup.exe` via the shared `windows-installer` action,
+  `perUser` scope so the unelevated self-update can still write into its
+  own install directory, `games` in `preserve_paths`) in place of "download
+  a zip, extract it, run the exe inside" — closes the human-flagged gap
+  above. None of this has been run against a real tagged gameshell-deploy
+  release yet; verify end-to-end (ideally on Windows) before relying on it
+  silently. See gerp93/gameshell-deploy's matching `claude/game-shell-deploy-cleanup-0xynn7`
+  branch for the app-side half of this (the `App.GetOpsDir`/`ApplyUpdate`
+  wiring and the `create.sh`/`templates/setup.sh` revert below).
+
+### FileShuttle
+- **Not previously tracked in this file.** Electron GUI (rewritten from a
+  Python/Flet app in PR #9), sql.js SQLite DB — same category and DB-layer
+  as Sweeper/TrackDraft/RolePlaymate.
+- [x] **2026-09-10: traced and fixed a real data-loss incident.** The
+  user's mappings appeared to vanish from the packaged/installed build.
+  Root cause: `app.setName('fileshuttle')` alone doesn't reliably keep dev
+  and packaged builds pointed at the same (or intentionally different)
+  userData folder, and `initDatabase()` silently creates a fresh empty
+  database with no warning if the resolved path doesn't exist — so any
+  path-resolution mismatch looks exactly like "my data disappeared." (On
+  this machine the actual data was intact the whole time — confirmed via
+  direct SQLite inspection — but the mechanism is real and this repo had
+  zero protection against it actually happening.) Fixed by adding the
+  three-part pattern now written up in `db-location-versioning.md`'s
+  "Instance isolation" section: `pinUserDataPath()` (dev gets an isolated
+  `fileshuttle-dev` folder, never shares a file with the packaged app),
+  `app.requestSingleInstanceLock()` (was already present here, kept as-is),
+  and a startup guard that blocks with a dialog instead of silently
+  seeding an empty DB when a *configured* custom db path is missing. See
+  `src/main/dbLocation.ts` (`pinUserDataPath`, `getConfiguredDbPath`) and
+  `src/main/main.ts`.
+- [x] **2026-09-12: found the actual root cause of the recurring reports**
+  (the 2026-09-10 fix above was real hardening but not the culprit).
+  Caught live with the user's help — had them open DevTools on an actual
+  broken launch, which showed "No handler registered for 'mappings:list'"
+  etc. in the console. Root cause: `second-instance` is a synchronous
+  listener active from process start, well before `initDatabase()`
+  resolves; a second launch landing in that window makes it create an
+  orphaned second `BrowserWindow` whose renderer calls the API before
+  `registerIPCHandlers()` has run in the still-starting first process.
+  That window is stuck forever showing defaults (blue_oval theme, zero
+  mappings) — while the real database was fine the entire time, and the
+  original startup flow creates its *own* correct window moments later
+  (both coexist — this is also what "two taskbar icons" turned out to
+  be). See `db-location-versioning.md`'s expanded write-up under item 2.
+  Fixed with an `appInitialized` guard; verified via 5 rapid-fire
+  launches 60ms apart (reliably broken before, reliably one working
+  window after).
+- [ ] Not re-checked this session: logo & branding surface coverage,
+  release-notes patch job wiring, CLAUDE.md presence (README already
+  states it follows KVG_Standards).
 
 ### Sweeper
 - [x] Re-vendored `src/renderer/themes.css` from VisualAssault
@@ -154,7 +223,24 @@ mechanical fix found; items still needing a human decision are marked
 - [x] Added `LICENSE` (AGPL-3.0) — see [PR #17](https://github.com/gerp93/Sweeper/pull/17), merged.
 - [x] Already has a working SQLite relocate feature (`src/main/dbLocation.ts`)
   — this became the reference pattern written up in
-  `db-location-versioning.md`. Nothing to do here.
+  `db-location-versioning.md`.
+- [x] **2026-09-10: added the "instance isolation" half of the pattern**
+  (previously only the relocate/adopt/reset bookkeeping existed). Sweeper's
+  old comment on `app.setName('sweeper')` explicitly said dev and packaged
+  *should* share one data folder — that's backwards for a finance app with
+  no other protection: no `app.requestSingleInstanceLock()` existed at
+  all, so two copies (or a dev run against a live packaged install) could
+  silently clobber each other via sql.js's whole-file overwrite-on-save.
+  Fixed to match FileShuttle's new reference shape: `pinUserDataPath()`
+  isolates dev into `sweeper-dev`, added the single-instance lock, and
+  `initDatabase()` is now guarded against a missing *configured* custom
+  path. See `src/main/dbLocation.ts` / `src/main/main.ts`.
+- [x] **2026-09-12: applied the actual root-cause fix** found and
+  confirmed in FileShuttle — an `appInitialized` guard on the
+  `second-instance` handler, closing a real race where a second launch
+  attempt during startup creates an orphaned, permanently-broken window.
+  See `db-location-versioning.md`'s expanded write-up and FileShuttle's
+  REPO_SCOPE entry for the full mechanism.
 - [x] Re-checked newer standards (2026-08-07 audit), all now fixed in
   [PR #18](https://github.com/gerp93/Sweeper/pull/18) (draft):
   neither `README.md` nor a `CLAUDE.md` mentioned KVG_Standards at all
@@ -396,6 +482,18 @@ mechanical fix found; items still needing a human decision are marked
   update-check (`electron-updater` directly), DB location
   (`src/main/dbLocation.ts` + `Settings.tsx` already implement the full
   relocate/adopt/reset UI, matching Sweeper's reference shape).
+- [x] **2026-09-10: added the same instance-isolation fix as Sweeper/
+  FileShuttle** — had the identical gap (unconditional `app.setName`, no
+  single-instance lock, no guard against a missing configured db path).
+  `pinUserDataPath()` now isolates dev into `trackdraft-dev`, added
+  `app.requestSingleInstanceLock()`, and `initDatabase()` is guarded. See
+  `db-location-versioning.md`'s "Instance isolation" section.
+- [x] **2026-09-12: applied the actual root-cause fix** found and
+  confirmed in FileShuttle — an `appInitialized` guard on the
+  `second-instance` handler, closing a real race where a second launch
+  attempt during startup creates an orphaned, permanently-broken window.
+  See `db-location-versioning.md`'s expanded write-up and FileShuttle's
+  REPO_SCOPE entry for the full mechanism.
 - [x] Fixed — [PR #1](https://github.com/gerp93/TrackDraft/pull/1) (draft):
   added a `CLAUDE.md` "Standards" section (repo had zero docs mentioning
   KVG_Standards); added missing `TODO.md` and `VERSION_BUMP.md`.
@@ -432,6 +530,25 @@ mechanical fix found; items still needing a human decision are marked
   `Settings.tsx`, same relocate/adopt/reset shape as TrackDraft/Sweeper),
   `TODO.md`, `VERSION_BUMP.md`, `CLAUDE.md`/`README.md` both state the repo
   follows KVG_Standards.
+- **2026-09-10 note, no action needed:** already ahead of the
+  "instance isolation" pattern added to `db-location-versioning.md` this
+  session (found while fixing the same class of bug in FileShuttle/Sweeper/
+  TrackDraft). RolePlaymate independently built: `app.setName(app.isPackaged
+  ? 'roleplaymate' : 'roleplaymate-dev')` (dev isolation), an explicit
+  `enforceDevDatabaseIsolation()` runtime check that resets dev's db path
+  if it's ever pointed at the packaged app's database, and — notably —
+  uses Node's built-in `node:sqlite` (`DatabaseSync`, WAL mode, real
+  incremental file writes) instead of `sql.js`. That last part is a bigger
+  deal than the other two: `sql.js` is the actual root cause of *why*
+  concurrent-instance protection is so critical for the other three apps
+  (it keeps the whole DB in memory and overwrites the file wholesale on
+  every save, so a stale second writer clobbers everything with no merge).
+  `node:sqlite` doesn't have that failure mode at all. Worth a deliberate
+  follow-up decision (not done in this session): whether new Electron
+  apps should default to `node:sqlite` instead of `sql.js`, and whether
+  migrating Sweeper/TrackDraft/FileShuttle off `sql.js` is worth the
+  effort given the tactical fix already landed. See RolePlaymate's
+  `src/main/dbLocation.ts` and `src/main/database/schema.ts`.
 - [ ] **Needs a human decision**: logo & branding entirely absent — no
   `assets/logo.png` exists yet. `scripts/generate-icons.js` is wired
   (verbatim copy of TrackDraft's sharp-based generator) but inert until a
@@ -567,53 +684,70 @@ mechanical fix found; items still needing a human decision are marked
   `uvicorn` typically pull in plain `httpx`); worth confirming that's
   intentional and not a typo before it ships.
 
-### FileShuttle
-- **New repo, created 2026-08-19.** A Flet desktop app that moves files
-  between folders on a schedule — same category as KVGenius (Flet GUI).
-  Discovered and audited during the 2026-08-24 sweep; never previously
-  tracked here.
-- **Full audit, 2026-08-24 — fully compliant, no PR needed:**
-  - Theming: `visual-assault-flet` pinned `@v0.2.0` (a real tag, not
-    `@main`) in `requirements.txt`.
-  - Licensing: `LICENSE` (AGPL-3.0) present; dependencies (`flet[all]`,
-    `apscheduler`, `pystray`, `Pillow`, plus the VisualAssault/kvg_updater/
-    kvg_dblocation packages) are all permissive/LGPL, no blocker.
-  - Release/CI: both `auto-release.yml` and `cut-release.yml` present,
-    both correctly call `release-flet.yml@main` (interim exception, no
-    KVG_Standards tags exist yet) with matching `app_name`/`entry_point`/
-    `version_file`. `VERSION_BUMP.md` present at root with a real dated
-    entry.
-  - Update-check: `kvg_updater` bundle mode fully wired
-    (`fileshuttle/ui/updater.py` wraps `check_for_bundle_update`/
-    `download_and_extract_bundle`/`apply_bundle_update_and_restart`),
-    pinned `@main` in `requirements.txt` (interim exception). Settings UI
-    exposes a "Check for Updates" button.
-  - DB location: `kvg_dblocation`'s `DbLocation` wired into
-    `fileshuttle/db/connection.py`, pinned `@main` (interim exception).
-    Settings UI (`fileshuttle/ui/views/settings_view.py`) exposes all
-    three of "Use Existing Database File" (adopt), "Move Database To New
-    Location" (relocate), and "Reset to Default Location" (reset), each
-    behind a restart-required confirmation.
-  - Logo & branding: full placement checklist passes — `assets/logo.png`
-    source mark, `scripts/generate_icons.py` (Pillow, pads to square,
-    generates `assets/icon.png`/`icon.ico` from the one source — matches
-    the KVGrainy/Sweeper pattern), README hero image (top of
-    `README.md`), in-app window icon (`page.window.icon = "icon.ico"` in
-    `fileshuttle/ui/app.py`), in-app nav-rail logo usage, and a packaged-
-    binary icon (Flet's own build pipeline auto-discovers
-    `assets/icon.png` by convention — `release-flet.yml` has no
-    `icon_path` input the way `release-python-gui.yml` does, so this is
-    the correct mechanism for this stack, not a gap).
-  - Release notes: inherited correctly from KVG_Standards'
-    `release-flet.yml`, which already has `generate_release_notes: true`
-    + a `body:` install blurb — nothing repo-local to check here.
-  - Docs: `README.md` explicitly states the repo follows KVG_Standards
-    with a link, not just an incidental mention.
-  - `TODO.md` present, product backlog only (not a compliance list, per
-    the standard); notes CI test workflow as a known future gap (not a
-    KVG_Standards violation — no Python CI template exists yet).
-  - Not previously in this file's scope matrix or repo count — added
-    above.
+## 1.0 readiness — first evaluation (2026-10-05)
+
+First pass against [`app-1-0-readiness.md`](app-1-0-readiness.md), run
+when the standard was written. **Partial, not a full audit:** only M2 (age)
+and the presence of a test-running CI workflow (M4) were checked directly
+against GitHub; the rest of the "known gaps" column is carried over from
+this file's own matrix and notes, not re-verified; M3, M5, M6 (beyond a
+`TODO.md` read), M7, and all attested gates were not evaluated. Since no
+repo has a `READINESS.md` yet, **A1–A5 fail for every app, so none can be
+`READY-FOR-1.0` regardless of the rest** — the table shows how far each is
+from the mechanical gates, not a final score.
+
+Out of scope (`N/A`): card-judge, timeline-trivia (web apps),
+gameshell-framework (library), radbot (no approved category).
+
+| App | Latest | Verdict | Age (M2 needs 90d) | Test-running CI (M4) | Known gaps |
+|---|---|---|---|---|---|
+| KVGrainy | v1.0.12 | PREMATURE-1.0 | 63d — reaches 90d on 2026-11-01 | No CI workflow found | Closest to ready: last audit was clean, default-branch runs all green. Missing test CI and age. |
+| Sweeper | v1.0.56 | PREMATURE-1.0 | 68d | None; no test files found by file-name heuristic | Default Electron menu; Electron 28; `sql.js` data store |
+| KVGroove | v0.0.7 | PRE-1.0 | 304d (only app past 90d) | No CI workflow found | No logo; 2 of the last 4 default-branch runs failed |
+| gameshell-deploy | v0.1.30 | PRE-1.0 | 75d | No CI workflow found | No logo; default branch is `migration/control-plane-scripts`, not `main` |
+| KVG_Converter | v0.0.3 | PRE-1.0 | 61d | No CI workflow found | No logo; theming/updater never exercised on a real display |
+| KVGenius | v0.0.59 | PRE-1.0 | 61d | No CI workflow found (has a `test` script) | No logo; unresolved "Needs real-world verification" in `TODO.md` (M6) |
+| KVGauge | v0.0.2 | PRE-1.0 | 61d | Not checked | Theming scope decision still open |
+| airport | v0.0.4 | PRE-1.0 | 57d | Not checked | Theming/icon-gen not covered for Godot |
+| TrackDraft | v0.0.9 | PRE-1.0 | 59d | No CI workflow found | Default Electron menu; Electron 28 |
+| RolePlaymate | v0.0.48 | PRE-1.0 | 49d | Has `ci.yml` (contents not inspected); 2 of the last 8 runs failed | No logo; Electron 35 |
+| FileShuttle | v0.0.25 | PRE-1.0 | 47d | No CI workflow found | Default Electron menu (tray menu only) |
+| KVG_RGB | v0.3.2 | PRE-1.0 | 41d | No CI workflow found | No logo |
+| Bracketeer | v0.0.9 | PRE-1.0 | 22d | Has `ci.yml` (contents not inspected); `vitest` configured | Electron 28 |
+
+Things this pass surfaced that aren't 1.0 gates themselves:
+
+- **`REPO_SCOPE.md` is stale for KVGenius:** the matrix still lists it as a
+  Flet GUI, but its `package.json` is Electron (`^44.4.3`) now — the
+  category cell, and likely the update-check/theming/logo cells, need a
+  re-audit.
+- **`REPO_SCOPE.md`'s logo cell is stale for Bracketeer:** it says TBD, but
+  `assets/logo.png` exists on `main`.
+- **No shared workflow runs tests.** Every release workflow builds and
+  publishes without a test step, and the only reusable CI workflow is
+  `ci-go.yml`. A shared `ci-node.yml`/`ci-python.yml` would let M4 be
+  satisfied by one `uses:` line; that's a separate shared-API design, not
+  part of this standard.
+- **The routine that audits this is not in this repo** (it's a Claude
+  routine) and, per the tooling note at the top of this file, may lack
+  Actions/Dependabot/issues access. M4, M5, and M7 are the gates most
+  likely to be reported `NOT COMPUTABLE`.
+
+## Windows installer (new standard, 2026-09-01)
+
+`release-python-gui.yml`, `release-go-gui.yml`, and `release-flet.yml` now
+wrap their Windows build in a proper `Setup.exe` via a new shared
+`windows-installer` composite action (Inno Setup) — see README.md's
+"Windows installer" section for the mechanics. No matrix column added for
+this: unlike the other standards above, it isn't a per-repo customization —
+every current consumer of those three workflows (KVGrainy, KVGroove,
+KVG_Converter, KVG_RGB, gameshell-deploy, KVGenius) inherits it automatically
+on its next release, since the workflows are called by tag (`@main`) and the
+installer step lives inside them. Nothing to change in any of those repos.
+Electron consumers (Sweeper, TrackDraft, RolePlaymate) already ship a real
+installer via `electron-builder`, unaffected. Godot (`airport`) and the
+Stream Deck plugin (`KVGauge`) are deliberately excluded, same rationale as
+their existing theming/icon-gen exceptions.
 
 ## Open questions (theming)
 

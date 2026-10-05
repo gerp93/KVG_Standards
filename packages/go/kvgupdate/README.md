@@ -11,6 +11,18 @@ well-established OS techniques (the same Windows self-delete-batch trick
 and Unix `exec` swap as `kvg-updater`) but hasn't been run against an
 actual `gameshell-deploy` release yet. Verify before shipping silently.
 
+`ApplyUpdateAndRestart` syncs the *entire* staged package (whatever
+`extra_stage_paths` shipped alongside the binary — scripts, templates,
+docs) into `targetDir`, not just the executable — `DownloadAndExtract`
+already fetches all of it, so an update that only swapped the binary would
+silently leave the rest of the app on the old version forever. Pass your
+app's own ops/install directory as `targetDir`; if the app has no such
+split, its own directory (the one holding the executable, e.g.
+`filepath.Dir(os.Executable())`) is a reasonable default. Anything named in
+`preserve` (operator data living inside `targetDir`, e.g.
+gameshell-deploy's `games/`) is left completely untouched, even if the
+staged package also ships a copy of it.
+
 ## Install
 
 Pin to a released tag — never a `@main`/pseudo-version:
@@ -39,7 +51,9 @@ func checkAndApplyUpdate() error {
     if err != nil {
         return err
     }
-    return kvgupdate.ApplyUpdateAndRestart(stagedDir, appName) // does not return on success
+    // opsDir: this app's ops/install directory (games/ under it is
+    // operator data — preserve it across every update).
+    return kvgupdate.ApplyUpdateAndRestart(stagedDir, appName, opsDir, []string{"games"}) // does not return on success
 }
 ```
 

@@ -133,6 +133,17 @@ Every active app repo gets a `TODO.md` at its root (`templates/TODO.md`) —
 its own backlog of future features and fixes, separate from
 `REPO_SCOPE.md`'s standards-compliance tracking.
 
+## 1.0 readiness
+
+Version numbers can't tell you whether an app is ready for `1.0` —
+`auto-release.yml` bumps on every push, and a single `feat!:` commit jumps
+the major. [`app-1-0-readiness.md`](app-1-0-readiness.md) defines the bar
+instead: twelve pass/fail gates (seven computed from the repo and GitHub,
+five attested in a per-app `READINESS.md` copied from
+`templates/READINESS.md`), and five verdicts the audit reports per app
+(`PRE-1.0`, `READY-FOR-1.0`, `OK-1.0`, `PREMATURE-1.0`, `N/A`). First
+evaluation results are in `REPO_SCOPE.md`.
+
 ## Release workflow catalog
 
 | Workflow | For | Used by |

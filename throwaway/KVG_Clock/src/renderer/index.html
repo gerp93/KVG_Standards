@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KVG Clock</title>
+  <link rel="stylesheet" href="themes.css">
+  <link rel="stylesheet" href="clock.css">
+</head>
+<body class="blue-oval-theme">
+  <main>
+    <svg id="clock" viewBox="-110 -110 220 220" role="img" aria-label="Analog clock">
+      <circle class="face" r="100"/>
+      <g id="ticks"></g>
+      <g id="numerals"></g>
+      <line id="hour"   class="hand hour"   x1="0" y1="8" x2="0" y2="-52"/>
+      <line id="minute" class="hand minute" x1="0" y1="10" x2="0" y2="-80"/>
+      <g id="second">
+        <line class="hand second" x1="0" y1="18" x2="0" y2="-86"/>
+      </g>
+      <circle class="hub" r="4.5"/>
+    </svg>
+  </main>
+  <script src="clock.js"></script>
+</body>
+</html>

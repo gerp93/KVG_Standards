@@ -1,0 +1,29 @@
+{
+  "name": "kvg-clock",
+  "version": "0.1.0",
+  "description": "A simple analog clock.",
+  "main": "src/main/main.js",
+  "license": "AGPL-3.0-only",
+  "author": "gerp93",
+  "repository": { "type": "git", "url": "git+https://github.com/gerp93/KVG_Clock.git" },
+  "scripts": {
+    "start": "electron .",
+    "build": "node scripts/check.js"
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.0"
+  },
+  "devDependencies": {
+    "electron": "^44.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.gerp93.kvgclock",
+    "productName": "KVG Clock",
+    "files": ["src/**/*", "package.json"],
+    "publish": [{ "provider": "github", "owner": "gerp93", "repo": "KVG_Clock" }],
+    "win": { "target": "nsis" },
+    "mac": { "target": "dmg" },
+    "linux": { "target": "AppImage" }
+  }
+}

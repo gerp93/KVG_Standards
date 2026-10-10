@@ -1,0 +1,103 @@
+name: Release (Claude Code plugin)
+
+# Reusable release workflow for Claude Code plugins, including mods. New
+# variant (first consumer: Shipwatch). There is no build artifact: a plugin
+# is installed from the repo itself through a marketplace, and installs track
+# the default branch. So the release here is a gate plus a marker: re-run
+# validate and test against the tagged commit, then publish a GitHub Release
+# whose body carries the install commands. Callers tag first (see
+# templates/auto-release.yml and templates/cut-release.yml), then call this
+# with that tag.
+#
+# Plugins using this should leave `version` out of plugin.json and the
+# marketplace entry so every commit is a new version for updates; see
+# claude-plugins.md. (The tag is for people. It does not pin installs.)
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3'
+        required: true
+        type: string
+      plugin_name:
+        description: 'The plugin name as listed in marketplace.json, e.g. shipwatch'
+        required: true
+        type: string
+      marketplace_name:
+        description: 'The marketplace name in marketplace.json; defaults to plugin_name'
+        required: false
+        type: string
+        default: ''
+      plugin_dir:
+        description: 'Directory holding .claude-plugin/plugin.json, relative to the repo root'
+        required: false
+        type: string
+        default: '.'
+      node_version:
+        required: false
+        type: string
+        default: '22'
+      claude_code_version:
+        description: 'npm version or tag of @anthropic-ai/claude-code to install'
+        required: false
+        type: string
+        default: 'latest'
+
+permissions:
+  contents: write
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Install the Claude Code CLI
+        env:
+          CLAUDE_CODE_VERSION: ${{ inputs.claude_code_version }}
+        run: |
+          set -e
+          npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION}"
+          claude --version
+
+      - name: Validate and test the plugin
+        env:
+          PLUGIN_DIR: ${{ inputs.plugin_dir }}
+        run: |
+          set -e
+          claude plugin validate "$PLUGIN_DIR"
+          claude plugin test "$PLUGIN_DIR"
+
+  release:
+    needs: validate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Work out the marketplace name
+        id: names
+        env:
+          PLUGIN_NAME: ${{ inputs.plugin_name }}
+          MARKETPLACE_NAME: ${{ inputs.marketplace_name }}
+        run: echo "marketplace=${MARKETPLACE_NAME:-$PLUGIN_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.plugin_name }} ${{ inputs.version }}
+          generate_release_notes: true
+          body: |
+            ## Installing
+
+            From a terminal (not inside a session):
+
+                claude plugin marketplace add ${{ github.repository }}
+                claude plugin install ${{ inputs.plugin_name }}@${{ steps.names.outputs.marketplace }}
+
+            Already installed? Run `claude plugin marketplace update ${{ steps.names.outputs.marketplace }}`, then `claude plugin update ${{ inputs.plugin_name }}@${{ steps.names.outputs.marketplace }}`. Installs track the repository's default branch, not this tag, so a release is a marker rather than a separate download.

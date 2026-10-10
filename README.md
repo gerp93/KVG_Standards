@@ -155,6 +155,10 @@ evaluation results are in `REPO_SCOPE.md`.
 | `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
 | `release-godot.yml` | Godot desktop games (GDScript only, no C#/.NET) | airport |
 | `ci-go.yml` | Go build+vet gate (library or web app) | gameshell-framework, card-judge, timeline-trivia |
+| `release-claude-plugin.yml` | Claude Code plugins and mods (no build artifact; validate, test, release with install commands) | Shipwatch |
+| `ci-claude-plugin.yml` | Claude Code plugin validate+test gate | Shipwatch |
+
+Claude Code plugins and mods have their own category: see [`claude-plugins.md`](claude-plugins.md).
 
 There's no `release-go-binary.yml`/similar for plain CLI-only Go apps in
 this catalog on purpose: `card-judge` and `timeline-trivia` are Go *web

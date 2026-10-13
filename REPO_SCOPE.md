@@ -1107,7 +1107,7 @@ specifically.
   calling `ci-go.yml` with `run_tests: true` (the new optional input), `cut-tag.yml` for semver
   tags, AGPL-3.0 (deps: `yaml.v3`, `x/text`, both compatible), `TODO.md`, docs state it follows
   KVG_Standards.
-- Not applicable by category: theming package (per-niche `theme:` config instead, see the
+- Not applicable by category: theming package (engine theme presets (light, dark, neon) instead, see the
   "Theming (decision to confirm)" section of `static-sites.md`), update-check, installer,
   Electron items, DB location, logo generation, release notes, 1.0 readiness.
 - Open: reusable build/publish workflow for niche repos (engine is private, so it needs a

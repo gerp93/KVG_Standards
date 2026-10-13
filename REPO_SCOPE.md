@@ -17,6 +17,8 @@ not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Claude Code plugins** are a separate category with their own standard, [`claude-plugins.md`](claude-plugins.md), and aren't part of the 18-app matrix below. Tracked here: [Shipwatch](https://github.com/gerp93/Shipwatch) (mod; build/PR dashboard; wired 2026-10-05 — see its section at the end).
 
+**Static sites** (the `directory-engine` generator and the niche repos built with it) are another separate category with their own standard, [`static-sites.md`](static-sites.md). Tracked here: [directory-engine](https://github.com/gerp93/directory-engine) (engine; see its section at the end).
+
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
 its sweep, but has no GitHub tool available to it that reads or writes
@@ -1097,3 +1099,16 @@ specifically.
   `VERSION_BUMP.md`, `TODO.md`, AGPL-3.0, README states it follows KVG_Standards.
 - Not applicable by category: theming, installer, update-check, DB location, Electron items,
   logo placement.
+
+## Static sites
+
+### directory-engine
+- **New repo, 2026-10-13**, the engine behind niche directory sites; private. Go module, `ci.yml`
+  calling `ci-go.yml` with `run_tests: true` (the new optional input), `cut-tag.yml` for semver
+  tags, AGPL-3.0 (deps: `yaml.v3`, `x/text`, both compatible), `TODO.md`, docs state it follows
+  KVG_Standards.
+- Not applicable by category: theming package (per-niche `theme:` config instead, see the
+  "Theming (decision to confirm)" section of `static-sites.md`), update-check, installer,
+  Electron items, DB location, logo generation, release notes, 1.0 readiness.
+- Open: reusable build/publish workflow for niche repos (engine is private, so it needs a
+  cross-repo token design), and the first `cut-tag.yml` run so niches can pin a tag.

@@ -14,4 +14,5 @@ jobs:
   ci:
     uses: gerp93/KVG_Standards/.github/workflows/ci-go.yml@main
     with:
-      working_directory: src # "." for gameshell-framework, "src" for card-judge/timeline-trivia
+      working_directory: src # "." for gameshell-framework and directory-engine, "src" for card-judge/timeline-trivia
+      # run_tests: true      # also run `go test ./...` (directory-engine does; default false)

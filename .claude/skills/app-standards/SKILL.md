@@ -238,8 +238,9 @@ update-check, Electron menu, DB location, logo script, release notes, 1.0 readin
 - **CI**: engine calls `ci-go.yml` with `run_tests: true` and has `cut-tag.yml`; niche CI
   runs `directory-engine validate -strict` on PRs. **Violation to flag:** a niche with no
   validation gate, or a local copy of Go build/vet/test logic instead of `ci-go.yml`.
-- **Theming** is the engine's `theme.preset` (light, dark, neon) plus optional color overrides,
-  not a VisualAssault dependency (pending owner sign-off, see the doc). Don't flag a niche for lacking a VisualAssault dependency; do flag a hand-edited
+- **Theming** is the engine's visitor-selectable light/dark/neon themes (`theme.default`,
+  `theme.choices`, optional per-theme colors), not a VisualAssault dependency (pending owner
+  sign-off, see the doc). Don't flag a niche for lacking a VisualAssault dependency; do flag a hand-edited
   stylesheet that duplicates the engine's.
 - **Hygiene**: featured listings are `rel="sponsored"` (engine-enforced); don't hand-edit
   `sitemap.xml`/`robots.txt`.

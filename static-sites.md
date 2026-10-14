@@ -45,17 +45,18 @@ no binary to release, no server to deploy, and nothing for users to update.
 [VisualAssault](https://github.com/gerp93/VisualAssault) is deliberately loud,
 eye-searing palettes for apps. That is wrong for a public directory that wants to
 look trustworthy to searchers and to businesses buying listings. So the engine ships
-three calm-to-bold built-in presets, chosen per niche with `theme.preset`:
-**light** (default), **dark** and **neon**. Neon is taken from VisualAssault's own
-"Neon" palette, so the family resemblance is deliberate. Any color a niche sets
-explicitly (validated hex only) overrides the preset, and the engine derives button and
-badge text colors and the browser `color-scheme` from the palette.
+three built-in themes, **light**, **dark** and **neon**, and lets the *visitor* pick:
+a dropdown in the header, remembered in their browser, no accounts or server involved.
+The site sets the default (`theme.default`, dark unless changed) and which themes are
+offered (`theme.choices`; a single entry locks the site to it). Neon is taken from
+VisualAssault's own "Neon" palette, so the family resemblance is deliberate. A niche may
+override individual colors per theme (validated hex only).
 
 This is a deliberate exception to "one VisualAssault dependency per repo", not drift:
-the engine does not import VisualAssault, it carries three presets. Because that is a
+the engine does not import VisualAssault, it carries three themes. Because that is a
 shared-standard decision it still needs the owner's sign-off. If VisualAssault later
-publishes a calm theme set (or a Go package), the engine can read a theme by name instead.
-The engine's tests assert every preset keeps body text and links at 4.5:1 contrast.
+publishes a calm theme set (or a Go package), the engine can read themes by name instead.
+The engine's tests assert every theme keeps body text and links at 4.5:1 contrast.
 
 ## Build and publish (not yet standardized)
 

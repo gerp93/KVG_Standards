@@ -58,6 +58,25 @@ shared-standard decision it still needs the owner's sign-off. If VisualAssault l
 publishes a calm theme set (or a Go package), the engine can read themes by name instead.
 The engine's tests assert every theme keeps body text and links at 4.5:1 contrast.
 
+## Revenue model: display ads
+
+Niche sites earn from on-page display ads (Google AdSense), not from paid listings or
+sponsorships. The engine reserves four ad positions (`top`, `in_feed`, `content`, `bottom`),
+writes `ads.txt`, and generates a `/privacy/` page with the AdSense disclosures. Consequences
+the standard fixes:
+
+- **Pages must have real content.** AdSense rejects thin, repetitive pages, so a niche needs
+  original text beyond the listing data, and `seo.combo_min` stays at 2 or higher.
+- **Consent is a niche responsibility.** Google requires a certified consent management platform
+  for visitors in the EEA, UK and Switzerland; each niche must have one in place before serving
+  that traffic. The engine does not provide one yet.
+- **No ads on pages without publisher content** (404, privacy), and none are injected outside the
+  four positions.
+- **Placeholders never ship.** `ads.placeholders` is for previewing the layout; niche CI runs
+  `validate -strict`, which fails while it is on.
+- The "featured listing" flag (sort first, `rel="sponsored"`) still exists but is not part of
+  the revenue model.
+
 ## Build and publish (not yet standardized)
 
 A niche is built with `directory-engine build` and the `dist/` folder published to a

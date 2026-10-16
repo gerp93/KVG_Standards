@@ -17,6 +17,11 @@ on:
         required: false
         type: string
         default: '1.22'
+      run_tests:
+        description: 'Also run go test ./... (off by default so existing callers behave exactly as before)'
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -35,3 +40,8 @@ jobs:
       - name: Vet
         working-directory: ${{ inputs.working_directory }}
         run: go vet ./...
+
+      - name: Test
+        if: ${{ inputs.run_tests }}
+        working-directory: ${{ inputs.working_directory }}
+        run: go test ./...

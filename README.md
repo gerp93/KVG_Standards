@@ -27,6 +27,14 @@ below — release/CI and update-check are covered, theming and icon
 generation are not yet. See [`game-repos.md`](game-repos.md) for the full
 breakdown. Reference: [gerp93/airport](https://github.com/gerp93/airport).
 
+## Static sites (directory engine)
+
+Websites generated from data, built with the private
+[`directory-engine`](https://github.com/gerp93/directory-engine) Go generator, are a
+category of their own: an engine repo plus one thin repo per niche site. See
+[`static-sites.md`](static-sites.md) for the rules, including the per-niche theming
+decision and the not-yet-standardized build/publish step.
+
 ## Theming
 
 Theme source of truth is [VisualAssault](https://github.com/gerp93/VisualAssault)
@@ -154,7 +162,7 @@ evaluation results are in `REPO_SCOPE.md`.
 | `release-flet.yml` | Flet desktop apps | kvgenius |
 | `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
 | `release-godot.yml` | Godot desktop games (GDScript only, no C#/.NET) | airport |
-| `ci-go.yml` | Go build+vet gate (library or web app) | gameshell-framework, card-judge, timeline-trivia |
+| `ci-go.yml` | Go build+vet gate (library, web app or generator); optional `run_tests: true` also runs `go test ./...` | gameshell-framework, card-judge, timeline-trivia, directory-engine |
 | `release-claude-plugin.yml` | Claude Code plugins and mods (no build artifact; validate, test, release with install commands) | Shipwatch |
 | `ci-claude-plugin.yml` | Claude Code plugin validate+test gate | Shipwatch |
 

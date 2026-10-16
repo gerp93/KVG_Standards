@@ -167,7 +167,7 @@ First classify the repo — the shape of "release" differs by category:
 | Go web app | Has a `Dockerfile`, deployed via [gameshell-deploy](https://github.com/gerp93/gameshell-deploy) / DigitalOcean App Platform | `templates/ci.yml` (build+vet) only. **No** GitHub-Release-binary workflow — deploy happens on push via DO's own GitHub integration, not a release artifact. If one exists, it's vestigial; remove it. |
 | Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-streamdeck.yml` for a Stream Deck plugin) |
 | Godot game | GDScript project (no C#/.NET), ships a native desktop export end users download | Same as Desktop GUI app/plugin, calling `release-godot.yml` — see `game-repos.md` for the full breakdown (theming and icon generation are not yet covered for this category). |
-| Claude Code plugin / mod | `.claude-plugin/plugin.json`; installed from the repo through a marketplace, no build artifact | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-claude-plugin.yml` (needs `plugin_name`), plus `templates/ci-claude-plugin.yml` as `ci.yml`. Omit `version` from the manifest and marketplace entry. Full rules: `claude-plugins.md` |
+| Claude Code plugin / mod | `.claude-plugin/plugin.json`; installed from the repo through a marketplace, no build artifact | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-claude-plugin.yml` (needs `plugin_name`), plus `templates/ci-claude-plugin.yml` as `ci.yml`. Omit `version` from the manifest and marketplace entry. Full rules: `claude-plugins.md`. With a companion Electron app in `app/`: the `*-plugin-app.yml` templates instead |
 | Static site engine / niche site | `directory-engine` (Go generator, tag-only release) or a niche repo with `site.yaml` + listings, built by the engine, published not released | Engine: `templates/ci.yml` with `working_directory: .` and `run_tests: true`, plus `templates/cut-tag.yml`. Niche: no release pipeline; `directory-engine validate -strict` in CI. Full rules: `static-sites.md` |
 | Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. This is the "New tech stacks" case above — ask the human before designing a new pattern. |
 
@@ -222,6 +222,12 @@ placement are N/A).
   and any name interpolated into a prompt is allow-listed.
 - **Also required as for any repo**: AGPL-3.0 `LICENSE`, `TODO.md`, and docs that state
   the repo follows KVG_Standards.
+- **Companion app** (an Electron app in `app/` sharing code with the plugin): see "A plugin
+  with a companion app" in `claude-plugins.md`. Releases use `templates/auto-release-plugin-app.yml`
+  and `templates/cut-release-plugin-app.yml` (plugin job always; app job only when `app/` or shared
+  code changed, calling `release-electron.yml` with `app_dir: app` and `skip_release_notes: true`).
+  **Violation to flag:** a `package.json` at the repo root of a plugin repo, or a separate release
+  tag for the app. The Electron items (theming, update-check, menu, logo) are audited against `app/`.
 
 ## Static sites (directory engine)
 

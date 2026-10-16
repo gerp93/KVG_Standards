@@ -158,7 +158,7 @@ evaluation results are in `REPO_SCOPE.md`.
 |---|---|---|
 | `release-python-gui.yml` | PyInstaller-packaged Python GUI apps | KVGrainy, KVGroove, kvg_converter |
 | `release-go-gui.yml` | Wails (Go) desktop apps | gameshell-deploy (gui/) |
-| `release-electron.yml` | Electron desktop apps | sweeper |
+| `release-electron.yml` | Electron desktop apps; `app_dir` for an app in a subfolder, `skip_release_notes` when sharing a release with a plugin | sweeper, Shipwatch (app/) |
 | `release-flet.yml` | Flet desktop apps | kvgenius |
 | `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
 | `release-godot.yml` | Godot desktop games (GDScript only, no C#/.NET) | airport |
@@ -190,6 +190,11 @@ Every repo with a `release-*.yml` pipeline gets **both**:
 
 Both call the same `release-*.yml` build variant; they just get the version
 number differently. Don't ship a repo with only one of the two.
+
+A Claude Code plugin that also ships a companion Electron app from `app/` uses
+`templates/auto-release-plugin-app.yml` and `templates/cut-release-plugin-app.yml`
+instead: the plugin job always runs, the app job only when the app or its shared code
+changed, both under one tag and one release. See `claude-plugins.md`.
 
 ## Adding a new consumer repo
 

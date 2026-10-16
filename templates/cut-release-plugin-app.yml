@@ -1,0 +1,75 @@
+# Template: copy to .github/workflows/cut-release.yml in a repo that is a Claude Code plugin AND ships a
+# companion Electron app from a subfolder (see claude-plugins.md, "A plugin with a companion app").
+# It replaces templates/cut-release.yml for that repo; pair it with auto-release-plugin-app.yml.
+#
+# An operator-run release with an explicit version (see templates/cut-release.yml for why this is a
+# workflow_dispatch and why it calls the build workflows directly). Unlike the automatic release, this one
+# always builds the app's installers: asking for a deliberately numbered release means shipping both.
+
+name: Cut Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release, e.g. "1.2.3" or "v1.2.3"'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate and normalize version
+        id: version
+        env:
+          RAW: ${{ inputs.version }}
+        run: |
+          set -e
+          VERSION="v${RAW#v}"
+          if ! [[ "$VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Invalid version: '$RAW' — expected X.Y.Z or vX.Y.Z (e.g. 1.2.3)." >&2
+            exit 1
+          fi
+          if git rev-parse "$VERSION" >/dev/null 2>&1; then
+            echo "Tag $VERSION already exists." >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        run: |
+          set -e
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          VERSION="${{ steps.version.outputs.version }}"
+          git tag -a "$VERSION" -m "$VERSION"
+          git push origin "$VERSION"
+
+  plugin:
+    needs: tag
+    uses: gerp93/KVG_Standards/.github/workflows/release-claude-plugin.yml@main
+    with:
+      version: ${{ needs.tag.outputs.version }}
+      plugin_name: TODO-plugin-name # as listed in .claude-plugin/marketplace.json
+    permissions:
+      contents: write
+
+  app:
+    needs: [tag, plugin]
+    uses: gerp93/KVG_Standards/.github/workflows/release-electron.yml@main
+    with:
+      version: ${{ needs.tag.outputs.version }}
+      app_dir: app
+      skip_release_notes: true # the plugin job wrote the release text
+    permissions:
+      contents: write

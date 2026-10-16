@@ -95,6 +95,29 @@ Same as every repo: AGPL-3.0 `LICENSE` (see [`licensing.md`](licensing.md)), a R
 `templates/`. A plugin with no third-party dependencies has nothing to check against
 AGPL-3.0.
 
+## A plugin with a companion app
+
+A plugin can ship a standalone Electron app from the same repo, sharing code with it (Shipwatch is
+the first: the pane and the app run the same host-independent core). The app is **a second product
+in the same repo, not a replacement**, so each keeps its own rules:
+
+- **Layout.** The plugin stays at the repo root. The app lives in a subfolder, `app/`, with its own
+  `package.json`, `package-lock.json` and `electron-builder` config, and imports the shared code by
+  relative path. **No `package.json` at the repo root**: Claude Code runs an automatic `npm install`
+  for a plugin that has one beside a lockfile, and the app's dependencies are not the plugin's.
+- **One version, one release.** Both ship under the same `vX.Y.Z` tag and the same GitHub Release.
+  The plugin job publishes it (install commands on top); the app job then adds the installers to it
+  with `skip_release_notes: true`, so electron-builder does not overwrite that text.
+- **Release triggers.** `templates/auto-release-plugin-app.yml` and `templates/cut-release-plugin-app.yml`
+  replace the plain plugin templates. The plugin job always runs. The app job runs only when a push
+  touched the app or the code it shares (a path filter in the caller, since a reusable workflow cannot
+  filter by path), so a plugin-only change does not build installers on three operating systems. The
+  app job calls `release-electron.yml` with `app_dir: app`.
+- **App standards apply to the app.** Theming, update-check, application menu, logo and the Electron
+  version rule are checked against `app/`, not the plugin. The plugin keeps its own list above.
+- **CI.** The app gets its own typecheck/test job in addition to `ci-claude-plugin.yml`; the shared
+  core keeps the purity check (no Node, DOM or engine types) so both products can import it.
+
 ## Not applicable
 
 Theming, Windows installer, update-check (the marketplace handles updates), DB location,

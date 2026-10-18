@@ -1117,7 +1117,7 @@ specifically.
 ## .NET / Avalonia desktop apps
 
 ### KVGuzzler
-- **New repo, 2026-10-18** ([gerp93/KVGuzzler](https://github.com/gerp93/KVGuzzler), created empty, private): a
+- **New repo, 2026-10-18** ([gerp93/KVGuzzler](https://github.com/gerp93/KVGuzzler), created empty, public): a
   cross-platform (Windows + Linux) PC power-consumption monitor and electricity-cost estimator, and the first app on the
   new Avalonia/.NET stack. The stack was designed and approved first, per `CLAUDE.md`'s "New tech stacks" process:
   [`dotnet-avalonia.md`](dotnet-avalonia.md), `release-avalonia.yml`, `ci-dotnet.yml`,
@@ -1126,7 +1126,10 @@ specifically.
   pointing here, `TODO.md`, `VERSION_BUMP.md`, `auto-release.yml` + `cut-release.yml`, `ci.yml`) and the wiring in
   `dotnet-avalonia.md`.
 - [ ] **Needs a human decision**: logo & branding - real artwork for `assets/logo.png`; do not fabricate one.
-- [ ] **Make the repo public before its first release**: Velopack's updater reads the releases without a token, and a
-  token cannot safely ship inside the app. See `dotnet-avalonia.md`.
+- The repo is **public** (checked 2026-10-18), which Velopack self-update needs: the updater reads the releases without a
+  token, and a token cannot safely ship inside the app. Making it private later would break updates. See
+  `dotnet-avalonia.md`.
+- [ ] VisualAssault's `v0.3.0` tag still has to be created (the Avalonia package is merged on `main`, commit `7de3267`, but
+  the session that merged it could not push tags). `scripts/update-visual-assault-avalonia.sh v0.3.0` fails until it exists.
 - [ ] The Windows leg of `release-avalonia.yml`, `vpk upload` for the second platform, and self-update end to end are
   unverified until the first real release (listed in `dotnet-avalonia.md`).

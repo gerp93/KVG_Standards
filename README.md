@@ -35,10 +35,18 @@ category of their own: an engine repo plus one thin repo per niche site. See
 [`static-sites.md`](static-sites.md) for the rules, including the per-niche theming
 decision and the not-yet-standardized build/publish step.
 
+## .NET / Avalonia desktop apps
+
+C# desktop apps built on Avalonia (Windows + Linux) are a category of their own: packaged and
+self-updating through Velopack, themed with VisualAssault's Avalonia package, with a shared
+SQLite-location helper. See [`dotnet-avalonia.md`](dotnet-avalonia.md) for the rules and
+`release-avalonia.yml` / `ci-dotnet.yml` below. First consumer:
+[gerp93/KVGuzzler](https://github.com/gerp93/KVGuzzler).
+
 ## Theming
 
 Theme source of truth is [VisualAssault](https://github.com/gerp93/VisualAssault)
-(CSS, Tkinter, Flet, and Angular packages, deterministically generated from
+(CSS, Tkinter, Flet, Angular, and Avalonia packages, deterministically generated from
 `themes/THEMES.md`). Consumers must pin to a released tag
 (`@vX.Y.Z`), never `@main` — see `themes-versioning.md`.
 
@@ -62,7 +70,8 @@ replacement. Because these are reusable `workflow_call` workflows called by
 tag, every current and future consumer of the three workflows above picks
 this up automatically on its next release — no per-repo change needed.
 Electron apps already get a real installer from `electron-builder`
-(`release-electron.yml`), so this doesn't apply there; Godot
+(`release-electron.yml`), and Avalonia apps from Velopack
+(`release-avalonia.yml`), so this doesn't apply there; Godot
 (`release-godot.yml`) and the Stream Deck plugin workflow are excluded too —
 see `REPO_SCOPE.md` for why.
 
@@ -88,7 +97,8 @@ reinvents:
 [`packages/python/kvg_updater`](packages/python/kvg_updater) (PyInstaller
 apps) and [`packages/go/kvgupdate`](packages/go/kvgupdate) (Wails/Go apps).
 Electron apps use `electron-updater` directly (see Sweeper's
-`src/main/main.ts`) — no KVG_Standards package needed there. Consumers pin
+`src/main/main.ts`) — no KVG_Standards package needed there — and Avalonia/.NET
+apps use Velopack directly the same way (wiring in `dotnet-avalonia.md`). Consumers pin
 to a released tag, never `@main` — see `update-check-versioning.md`.
 
 ## SQLite database location
@@ -97,7 +107,8 @@ Any app storing its own data in SQLite should let the user relocate that
 file (for backup/syncing), not hardcode a fixed path:
 [`packages/python/kvg_dblocation`](packages/python/kvg_dblocation) for
 Python apps. Electron apps follow Sweeper's `src/main/dbLocation.ts`
-directly as the reference pattern. The Settings UI should also show the
+directly as the reference pattern. Avalonia/.NET apps vendor
+[`packages/dotnet/KvgDbLocation`](packages/dotnet/KvgDbLocation) (one source file, from a tag). The Settings UI should also show the
 current database file size, formatted in whichever unit (KB/MB/GB) fits
 its size — see `db-location-versioning.md`.
 
@@ -161,6 +172,8 @@ evaluation results are in `REPO_SCOPE.md`.
 | `release-electron.yml` | Electron desktop apps; `app_dir` for an app in a subfolder, `skip_release_notes` when sharing a release with a plugin | sweeper, Shipwatch (app/) |
 | `release-flet.yml` | Flet desktop apps | kvgenius |
 | `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
+| `release-avalonia.yml` | Avalonia (.NET) desktop apps, packaged with Velopack: Windows `Setup.exe`, Linux AppImage | KVGuzzler |
+| `ci-dotnet.yml` | .NET build gate (`-warnaserror`); optional `run_tests: true` | KVGuzzler |
 | `release-godot.yml` | Godot desktop games (GDScript only, no C#/.NET) | airport |
 | `ci-go.yml` | Go build+vet gate (library, web app or generator); optional `run_tests: true` also runs `go test ./...` | gameshell-framework, card-judge, timeline-trivia, directory-engine |
 | `release-claude-plugin.yml` | Claude Code plugins and mods (no build artifact; validate, test, release with install commands) | Shipwatch |

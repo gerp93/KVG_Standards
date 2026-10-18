@@ -2,7 +2,7 @@
 
 [VisualAssault](https://github.com/gerp93/VisualAssault) is the single
 source of truth for color themes (`themes/THEMES.md`), with generated
-packages for CSS, Tkinter, Flet, and Angular.
+packages for CSS, Tkinter, Flet, Angular, and Avalonia (C#).
 
 ## The rule
 
@@ -51,6 +51,21 @@ tag-pinning principle is applied by **vendoring a pinned copy** instead:
 Any other Go (or plain static-HTML) consumer should follow the same
 pattern: vendor a marked, tag-sourced copy plus a re-vendor script, never a
 silent hand-copy.
+
+## Avalonia (C#) consumers
+
+NuGet can't pull from a git subfolder and VisualAssault isn't published to a registry, so
+Avalonia apps use the same vendoring pattern as the Go/static consumers above:
+
+- The three files from VisualAssault's `packages/avalonia/VisualAssault/` (`Themes.cs`,
+  `FluentMapping.cs`, `ThemeManager.cs`) are copied into the app, each starting with a
+  `// Vendored-from: gerp93/VisualAssault <tag> (<sha>)` line.
+- `scripts/update-visual-assault-avalonia.sh <tag>` (from `templates/`) re-fetches them from a
+  given release tag - the reviewable equivalent of bumping a pinned version string. It refuses
+  `main`.
+- A control that renders unthemed is fixed in VisualAssault (extend the mapping table in
+  `scripts/generate_packages.py`, run `packages/avalonia/verify`, release), never by patching the
+  vendored copy. Details: `dotnet-avalonia.md`.
 
 ## "Vibe install" mode
 

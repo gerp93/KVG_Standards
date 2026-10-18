@@ -74,6 +74,7 @@ jobs:
     #   release-streamdeck.yml  (Elgato Stream Deck plugin)
     #   release-claude-plugin.yml (Claude Code plugin/mod — no build artifact; needs plugin_name)
     #   release-godot.yml       (Godot desktop game — GDScript only, no C#/.NET)
+    #   release-avalonia.yml    (Avalonia/.NET desktop app — Velopack; needs app_name, project_path, exe_name)
     uses: gerp93/KVG_Standards/.github/workflows/release-python-gui.yml@main
     with:
       version: ${{ needs.tag.outputs.version }}

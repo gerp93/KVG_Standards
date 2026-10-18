@@ -24,6 +24,12 @@ real, maintained answer — nothing to build, see Sweeper's
 `src/main/main.ts` for the reference wiring
 (`setupAutoUpdater`/`checkForUpdatesNow`).
 
+Avalonia/.NET apps don't either: **Velopack** (MIT) is used directly, the
+same way — see "Update-check" in `dotnet-avalonia.md` for the wiring
+(`VelopackApp.Build().Run()` first, an `IsInstalled` guard, `GithubSource`).
+It replaces a planned C# port of `kvgupdate`, which was dropped. Its packaging
+is built into `release-avalonia.yml`, so there is nothing to pin from here.
+
 ## The rule
 
 **Consumers pin to a tag, never `@main`/a pseudo-version.**

@@ -54,6 +54,15 @@ For Go/JS dependencies, check `go.mod`'s resolved modules or
 the same "permissive/LGPL/GPL-or-later is fine, anything else needs a
 look" triage applies.
 
+For .NET dependencies, list the full tree with
+`dotnet list <project> package --include-transitive`, then read each
+package's `<license>`/`<licenseUrl>` in its `.nuspec` (in the NuGet cache
+under `~/.nuget/packages/<id>/<version>/`). Expected baseline for an Avalonia
+app: the .NET runtime, Avalonia, SkiaSharp, HarfBuzzSharp, Microsoft.Data.Sqlite
+and Velopack are MIT; check anything app-specific (a sensor or chart library)
+individually. Watch for libraries that need a commercial licence above a
+revenue threshold - that is a blocker, not a permissive licence.
+
 ## Current state (as of this audit)
 
 All 10 active app repos plus VisualAssault, checked against their actual

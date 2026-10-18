@@ -1,0 +1,218 @@
+name: Release (Avalonia / .NET)
+
+# Reusable build+release workflow for Avalonia (.NET) desktop apps, packaged
+# and published with Velopack (`vpk`). Windows gets a Setup.exe installer,
+# Linux gets an AppImage (Velopack makes no other Linux artifact). Installed
+# builds update themselves through Velopack's UpdateManager - see
+# dotnet-avalonia.md for the app-side wiring.
+#
+# Same shape as release-electron.yml: the stack's own packaging tool does the
+# packaging and publishes to the GitHub Release itself, then a small job
+# patches the install instructions onto the release body. Callers tag first
+# (see templates/cut-release.yml / auto-release.yml), then call this with
+# that tag.
+#
+# The app must reference the `Velopack` NuGet package. This workflow reads the
+# version the project resolves and installs the *same* version of the `vpk`
+# tool, because Velopack requires the packager and the in-app library to match.
+#
+# macOS is deliberately not built (see dotnet-avalonia.md).
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3 (must be valid SemVer once the leading v is dropped)'
+        required: true
+        type: string
+      app_name:
+        description: >-
+          Velopack package id, e.g. KVGuzzler. Becomes the AppImage file name and the install
+          identity - do not change it after the first release, installed copies find their
+          updates by this id.
+        required: true
+        type: string
+      project_path:
+        description: 'Path to the app''s .csproj, relative to the repo root'
+        required: true
+        type: string
+      exe_name:
+        description: >-
+          Name of the main executable without an extension, e.g. KVGuzzler (the workflow adds .exe
+          on Windows). This is the .csproj's AssemblyName.
+        required: true
+        type: string
+      app_title:
+        description: 'Display name shown by the installer; defaults to app_name'
+        required: false
+        type: string
+        default: ''
+      icon_ico:
+        description: 'Windows icon (.ico), relative to the repo root, generated from assets/logo.png'
+        required: false
+        type: string
+        default: ''
+      icon_png:
+        description: 'Linux icon (.png), relative to the repo root, generated from assets/logo.png'
+        required: false
+        type: string
+        default: ''
+      publisher:
+        description: 'Publisher/author name shown in installer metadata'
+        required: false
+        type: string
+        default: 'gerp93'
+      dotnet_version:
+        description: 'SDK version for actions/setup-dotnet; use the current LTS (see dotnet-avalonia.md)'
+        required: false
+        type: string
+        default: '10.0.x'
+      test_path:
+        description: 'Test project or solution to run with `dotnet test` before packaging; leave empty to skip'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            rid: win-x64
+            channel: win
+          - os: ubuntu-latest
+            rid: linux-x64
+            channel: linux
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      # vpk builds the AppImage's filesystem with mksquashfs and the delta
+      # packages with zstd; it fails outright if either is missing.
+      - name: Install Linux packaging dependencies
+        if: matrix.channel == 'linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y squashfs-tools zstd
+
+      - name: Restore
+        run: dotnet restore "${{ inputs.project_path }}"
+
+      - name: Test
+        if: ${{ inputs.test_path != '' }}
+        run: dotnet test "${{ inputs.test_path }}" -c Release
+
+      # Install the vpk that matches the Velopack library the app compiles against.
+      - name: Install vpk (matching the app's Velopack version)
+        run: |
+          set -e
+          VPK_VERSION=$(dotnet list "${{ inputs.project_path }}" package --format json \
+            | jq -r '[.projects[].frameworks[]?.topLevelPackages[]? | select(.id == "Velopack") | .resolvedVersion][0]')
+          if [ -z "$VPK_VERSION" ] || [ "$VPK_VERSION" = "null" ]; then
+            echo "::error::${{ inputs.project_path }} has no direct reference to the Velopack NuGet package."
+            exit 1
+          fi
+          echo "Velopack $VPK_VERSION"
+          dotnet tool install -g vpk --version "$VPK_VERSION"
+
+      # -p:Version stamps the assembly; vpk's --packVersion stamps the package.
+      # Both come from the tag, and the app reads its version from Velopack
+      # (UpdateManager.CurrentVersion), never from a constant of its own.
+      - name: Publish
+        run: |
+          set -e
+          dotnet publish "${{ inputs.project_path }}" -c Release -r ${{ matrix.rid }} \
+            --self-contained -p:Version="${VERSION#v}" -o publish
+        env:
+          VERSION: ${{ inputs.version }}
+
+      # Previous release's packages are needed in the output dir so vpk can build
+      # delta updates. The first release has nothing to download, which is fine.
+      - name: Download previous release (for deltas)
+        run: vpk download github --repoUrl "https://github.com/${{ github.repository }}" --token "$GH_TOKEN" --channel ${{ matrix.channel }} --outputDir releases || echo "No previous release to base deltas on."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pack
+        run: |
+          set -e
+          EXE="${{ inputs.exe_name }}"
+          ICON=""
+          if [ "${{ matrix.channel }}" = "win" ]; then
+            EXE="$EXE.exe"
+            ICON="${{ inputs.icon_ico }}"
+          else
+            ICON="${{ inputs.icon_png }}"
+          fi
+          ARGS=(--packId "${{ inputs.app_name }}" --packVersion "${VERSION#v}" --packDir publish
+                --mainExe "$EXE" --packAuthors "${{ inputs.publisher }}"
+                --channel ${{ matrix.channel }} --outputDir releases)
+          if [ -n "${{ inputs.app_title }}" ]; then ARGS+=(--packTitle "${{ inputs.app_title }}"); fi
+          if [ -n "$ICON" ]; then ARGS+=(--icon "$ICON"); fi
+          vpk pack "${ARGS[@]}"
+        env:
+          VERSION: ${{ inputs.version }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: velopack-${{ matrix.channel }}
+          path: releases/
+
+  release:
+    # One job uploads every platform, in sequence, so two runners never race to
+    # create the same GitHub Release. The release stays a draft until the last
+    # upload, so users never see a half-uploaded release.
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Install vpk (matching the app's Velopack version)
+        run: |
+          set -e
+          dotnet restore "${{ inputs.project_path }}"
+          VPK_VERSION=$(dotnet list "${{ inputs.project_path }}" package --format json \
+            | jq -r '[.projects[].frameworks[]?.topLevelPackages[]? | select(.id == "Velopack") | .resolvedVersion][0]')
+          dotnet tool install -g vpk --version "$VPK_VERSION"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: releases
+          merge-multiple: true
+
+      - name: Upload to the GitHub Release
+        run: |
+          set -e
+          COMMON=(--outputDir releases --repoUrl "https://github.com/${{ github.repository }}"
+                  --token "$GH_TOKEN" --tag "$VERSION" --releaseName "$VERSION" --merge)
+          vpk upload github "${COMMON[@]}" --channel win
+          vpk upload github "${COMMON[@]}" --channel linux --publish
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ inputs.version }}
+
+      - name: Add install instructions to release notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          BODY=$(printf '## Installing\n\n- **Windows** — download the `Setup.exe` and run it. It installs for your user (no admin prompt) and updates itself.\n- **Linux** — download the `.AppImage`, make it executable (`chmod +x *.AppImage`), and run it. It updates itself.\n\nThe other files in this release (the `.nupkg` packages, `RELEASES-*` and `*.json` feeds) are what the built-in updater reads; you do not need to download them.\n\nThese builds are unsigned, so Windows SmartScreen will warn about an unrecognized publisher — click through to launch it.\n')
+          RELEASE_ID=$(gh api "repos/${{ github.repository }}/releases/tags/${{ inputs.version }}" --jq .id)
+          gh api -X PATCH "repos/${{ github.repository }}/releases/$RELEASE_ID" \
+            -f body="$BODY" -F generate_release_notes=true

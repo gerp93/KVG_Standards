@@ -55,7 +55,7 @@ Notes:
 
 - **M4 requires *a* test-running workflow, not a particular one.** The
   shared release workflows run no tests and there is no reusable
-  `ci-node`/`ci-python` yet (only `ci-go.yml`). A shared Node/Python test
+  `ci-node`/`ci-python` yet (only `ci-go.yml` and `ci-dotnet.yml`). A shared Node/Python test
   workflow is a worthwhile follow-up (a new shared-API addition, so it
   needs its own approved design) but isn't a precondition of this standard.
 - **An empty `TODO.md` is not evidence of "no known issues"** — most apps'

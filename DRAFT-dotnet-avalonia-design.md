@@ -1,11 +1,11 @@
 # DRAFT — .NET / Avalonia desktop stack standard
 
-> **Status: proposal, awaiting approval.** Nothing in here is implemented or
-> a standard yet. Per `CLAUDE.md` ("New tech stacks"), this design needs
-> human sign-off before any package, workflow, template or skill change
-> lands. On approval this file becomes `dotnet-avalonia.md` (minus this
-> banner and the "Decisions" section) and the checklist at the bottom is
-> executed in order.
+> **Status: design decisions answered by the owner; implementation not
+> started.** Nothing in here is implemented or a standard yet. Per
+> `CLAUDE.md` ("New tech stacks"), no package, workflow, template or skill
+> change lands until the owner says to proceed. When it does, this file
+> becomes `dotnet-avalonia.md` (minus this banner and the "Decisions"
+> section) and the checklist at the bottom is executed in order.
 >
 > Nothing here has been built or run — it's modelled on the existing
 > Wails/Go and Electron patterns in this repo and on VisualAssault's
@@ -236,37 +236,34 @@ tag; moving to it is the follow-up already described in
 
 ---
 
-## Decisions I need from you
+## Decisions (answered by the owner)
 
-Defaults are my recommendations; "approve all defaults" is a valid answer.
-
-1. **Updater: port `kvgupdate` to C# (default) vs. use Velopack.**
-   Velopack is a real, maintained .NET updater with delta updates, so it
-   fits the "don't wrap a good library" precedent set by `electron-updater`.
-   But it brings its own packaging (`vpk`, its own installer and release
-   layout), which conflicts with the shared Inno installer and archive
-   naming used by every other stack here. Default: port (one packaging
-   story, ~450 lines already written in Go); choose Velopack if you'd rather
-   delegate the hard part and accept a second pipeline.
-2. **Shared code delivery: vendored source from a tag (default) vs.
-   publishing to NuGet.** Vendoring needs no accounts and matches existing
-   precedents; NuGet gives proper version ranges but means owning a registry
-   publisher and, for GitHub Packages, auth even for public reads.
-3. **Linux artifact: `tar.gz` only (default) vs. also AppImage.** tar.gz
-   matches the other stacks; AppImage is nicer for end users but adds a
-   build dependency.
-4. **Theme depth: Fluent key mapping for common controls (default) vs.
-   full custom `ControlTheme`s.** The latter is much more work for
-   pixel-exact control looks.
-5. **No menu bar + in-window Help/About (default)** vs. a native/in-window
-   Help-only menu.
-6. **Out of scope here, decide at the app level:** the power monitor needs
-   elevation to read CPU sensors. An elevated helper (service) installs
+1. **Updater: port `kvgupdate` (Go) to C#.** Chosen over Velopack, which
+   would have meant a second packaging pipeline next to the shared Inno
+   installer. (Go appears here only because the existing updater for the
+   Wails apps is written in Go; the new stack itself has no Go.)
+2. **Shared code delivery: copy the files into each app from a tag**, via
+   re-vendor scripts. **Future work:** also publish `KvgUpdate` and
+   `KvgDbLocation` as a NuGet package once someone is ready to own a
+   registry publisher (and decide how apps authenticate to GitHub Packages,
+   or use nuget.org instead). Until then, vendoring is the standard.
+3. **Linux artifact: `tar.gz` only.** AppImage can be revisited later.
+4. **Theme: lives in VisualAssault.** There is no Avalonia package there
+   yet (it has CSS, Tkinter, Flet, Angular), so it is created there, not
+   locally in an app. Depth: Fluent key mapping for common controls;
+   anything an app finds unthemed is fixed in VisualAssault.
+5. **Menu: no menu bar; in-window Help/About.**
+6. **Left to the app's own design (not the standard):** the power monitor
+   needs elevation to read CPU sensors. An elevated helper installs
    per-machine, which conflicts with the per-user install the self-updater
    needs. Likely answer: UI per-user + helper updated through its own
-   installer step. I'd settle that in the app's design, not in the standard.
+   installer step.
 
-## What happens on approval (in this order, per `CLAUDE.md`)
+**Still needed from the owner:** a go-ahead to start implementing (step 1
+below). Step 1 also needs push access to VisualAssault, which this session
+doesn't have yet.
+
+## What happens on go-ahead (in this order, per `CLAUDE.md`)
 
 1. **VisualAssault** (separate repo/PR — I currently have read-only access
    and would need push access attached): `packages/avalonia`, generator

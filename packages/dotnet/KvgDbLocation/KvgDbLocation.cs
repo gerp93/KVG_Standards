@@ -50,7 +50,13 @@ public sealed class DbLocation
     /// build - with Velopack, <c>!UpdateManager.IsInstalled</c>.</param>
     public static string ResolveDataDirectory(string appName, bool isDevelopment)
     {
-        var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+        // SpecialFolderOption.Create matters: with the default (None), .NET returns "" when the folder
+        // does not exist yet (a fresh Linux account has no ~/.local/share), and Path.Combine("", name)
+        // is a RELATIVE path - the database would silently be created in the current directory.
+        var root = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData,
+                                             Environment.SpecialFolderOption.Create);
+        if (string.IsNullOrEmpty(root))
+            throw new InvalidOperationException("Could not determine the per-user application data folder.");
         return Path.Combine(root, isDevelopment ? appName + "-dev" : appName);
     }
 

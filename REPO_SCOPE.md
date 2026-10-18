@@ -1133,3 +1133,7 @@ specifically.
   the session that merged it could not push tags). `scripts/update-visual-assault-avalonia.sh v0.3.0` fails until it exists.
 - [ ] The Windows leg of `release-avalonia.yml`, `vpk upload` for the second platform, and self-update end to end are
   unverified until the first real release (listed in `dotnet-avalonia.md`).
+- **Exception granted 2026-10-18** (owner decision): KVGuzzler installs **per-machine with an admin prompt** and ships a
+  background **collector Windows service**, so power is recorded when nobody is logged in; history lives in
+  `%ProgramData%\KVGuzzler`. This is specific to this app and recorded in `dotnet-avalonia.md` ("Exception: per-machine
+  install"). Not an audit violation. Unverified until the first Windows release.

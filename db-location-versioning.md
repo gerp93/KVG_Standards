@@ -139,10 +139,17 @@ real prior art.
 | Package | For | Status |
 |---|---|---|
 | [`packages/python/kvg_dblocation`](packages/python/kvg_dblocation) | Any Python app storing data in SQLite | New — logic smoke-tested (default/effective path, copy-on-relocate, adopt-existing, reset), not yet wired into a real app's Settings UI |
+| [`packages/dotnet/KvgDbLocation`](packages/dotnet/KvgDbLocation) | Avalonia/.NET apps storing data in SQLite | New — one dependency-free source file, **vendored from a tag** (`templates/update-kvg-dblocation.sh`), not NuGet. Also carries the instance-isolation pieces (dev/packaged data folders, `InstanceLock`, missing-configured-path check). Smoke-tested, incl. a real second process and a real WAL database; not yet wired into a real app |
 
 Electron apps don't need a package: Sweeper's `dbLocation.ts` **is** the
 pattern — copy its shape (parameterize the two hardcoded values,
 `sweeper.db` and the app name, if reusing it in another Electron app).
+
+Avalonia/.NET apps use `Microsoft.Data.Sqlite` in WAL mode (real incremental
+writes, so the `sql.js` failure mode above does not apply, though items 1-3
+still do). Before relocating, close connections *and* call
+`SqliteConnection.ClearAllPools()`: otherwise recent writes sit in the `-wal`
+file and the copy is unreadable. See `dotnet-avalonia.md`.
 
 No Go/Wails app currently stores data in SQLite (card-judge/timeline-trivia
 use MariaDB, server-side). If one does in the future, design a

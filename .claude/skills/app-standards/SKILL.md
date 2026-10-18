@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), Claude Code plugins/mods (version-less, marketplace-installed, validate+test CI), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), Claude Code plugins/mods (version-less, marketplace-installed, validate+test CI), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), Avalonia/.NET desktop apps (Velopack release+update, vendored VisualAssault theme and KvgDbLocation), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -30,8 +30,8 @@ actual rules.
 ## New tech stacks
 
 Theming, release/CI, update-check, and licensing each cover a fixed list of
-stacks today (Tkinter/Flet/Electron/Wails/CSS/Angular, PyInstaller/Wails/
-Electron/Flet, etc.). If a new app needs a stack that isn't in one of these
+stacks today (Tkinter/Flet/Electron/Wails/CSS/Angular/Avalonia, PyInstaller/Wails/
+Electron/Flet/Avalonia, etc.). If a new app needs a stack that isn't in one of these
 checklists, **that's not something to solve locally in the app repo**:
 
 1. Design the standard for that stack, following the shape of the existing
@@ -82,7 +82,8 @@ generalize it later" become permanent.
   (`KVG_RGB` is not one of these — despite the name, it's an unrelated
   OpenRGB lighting-device controller, not a theme package. It's a normal
   VisualAssault CSS *consumer*, tracked like any other app repo.)
-- Packages exist for CSS, Tkinter, Flet, and Angular. If a repo's stack
+- Packages exist for CSS, Tkinter, Flet, Angular, and Avalonia (C#, **vendored from a tag**,
+  see "Avalonia / .NET desktop apps" below). If a repo's stack
   isn't one of those, "vibe install" (see VisualAssault's README) is
   acceptable for prototypes but should not be treated as a real dependency
   in anything that gets a release pipeline.
@@ -115,6 +116,8 @@ user can see it, not just dropped into the README and forgotten.
     `options.App{ Icon: ... }`. Sweeper's `src/main/main.ts` and KVGrainy's
     `gui.py` (`setup_icon`) are the reference implementations for
     Electron/Tkinter respectively.
+  - Avalonia: `Window.Icon` from an `AvaloniaResource` (window); `<ApplicationIcon>` and
+    `release-avalonia.yml`'s `icon_ico`/`icon_png` inputs (installer, packaged exe, AppImage).
   - **In-app usage** — the logo shown somewhere in the app's own UI, next to
     the app name (Sweeper's sidebar, KVGrainy's header row next to the
     title/subtitle). Skip only if the app genuinely has no chrome to put it
@@ -165,7 +168,7 @@ First classify the repo — the shape of "release" differs by category:
 |---|---|---|
 | Go library | `go.mod` at root, no `main` package meant to run standalone, other repos import it | `templates/cut-tag.yml` only — bare semver tag, no build |
 | Go web app | Has a `Dockerfile`, deployed via [gameshell-deploy](https://github.com/gerp93/gameshell-deploy) / DigitalOcean App Platform | `templates/ci.yml` (build+vet) only. **No** GitHub-Release-binary workflow — deploy happens on push via DO's own GitHub integration, not a release artifact. If one exists, it's vestigial; remove it. |
-| Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-streamdeck.yml` for a Stream Deck plugin) |
+| Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-avalonia.yml` for Avalonia/.NET, `release-streamdeck.yml` for a Stream Deck plugin) |
 | Godot game | GDScript project (no C#/.NET), ships a native desktop export end users download | Same as Desktop GUI app/plugin, calling `release-godot.yml` — see `game-repos.md` for the full breakdown (theming and icon generation are not yet covered for this category). |
 | Claude Code plugin / mod | `.claude-plugin/plugin.json`; installed from the repo through a marketplace, no build artifact | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-claude-plugin.yml` (needs `plugin_name`), plus `templates/ci-claude-plugin.yml` as `ci.yml`. Omit `version` from the manifest and marketplace entry. Full rules: `claude-plugins.md`. With a companion Electron app in `app/`: the `*-plugin-app.yml` templates instead |
 | Static site engine / niche site | `directory-engine` (Go generator, tag-only release) or a niche repo with `site.yaml` + listings, built by the engine, published not released | Engine: `templates/ci.yml` with `working_directory: .` and `run_tests: true`, plus `templates/cut-tag.yml`. Niche: no release pipeline; `directory-engine validate -strict` in CI. Full rules: `static-sites.md` |
@@ -255,6 +258,38 @@ update-check, Electron menu, DB location, logo script, release notes, 1.0 readin
 - **Not yet standardized**: the niche build/publish workflow (blocked on how a private engine
   is fetched in CI). Flag a repo-local deploy workflow as interim, not as a violation.
 
+## Avalonia / .NET desktop apps
+
+Source of truth: [`dotnet-avalonia.md`](https://github.com/gerp93/KVG_Standards/blob/main/dotnet-avalonia.md).
+Windows + Linux only (no macOS). Reference app: [gerp93/KVGuzzler](https://github.com/gerp93/KVGuzzler).
+
+- **Theming**: VisualAssault's Avalonia package vendored from a release tag into
+  `src/<App>/Themes/VisualAssault/` via `scripts/update-visual-assault-avalonia.sh <tag>`.
+  **Violations to flag:** files without the `// Vendored-from: ... <tag>` header, hand-edited theme
+  files, a pin to `main`, a hand-rolled palette.
+- **Release/CI**: `auto-release.yml` **and** `cut-release.yml` calling `release-avalonia.yml`
+  (Velopack: Windows `Setup.exe`, Linux AppImage), `ci.yml` calling `ci-dotnet.yml`, `VERSION_BUMP.md`.
+  The app needs a direct `Velopack` NuGet reference. **Violations to flag:** a local copy of the
+  packaging logic, the Inno `windows-installer` action used for an Avalonia app, a version taken from
+  anywhere but Velopack, a private repo with self-update (the updater needs to read releases without a
+  token).
+- **Update-check**: Velopack used directly (like `electron-updater`): `VelopackApp.Build().Run()`
+  first in `Main`, an `UpdateManager.IsInstalled` guard (`CheckForUpdatesAsync` throws otherwise),
+  `GithubSource`. **Violations to flag:** a hand-rolled updater, a missing `VelopackApp.Build().Run()`,
+  a desktop app with a release pipeline and no update check.
+- **SQLite location**: `KvgDbLocation.cs` vendored via `scripts/update-kvg-dblocation.sh <tag>`; dev and
+  packaged data folders separate, `InstanceLock`, missing-configured-path check, file size shown in
+  Settings, `Microsoft.Data.Sqlite` in WAL mode with `ClearAllPools()` before relocating.
+  **Violations to flag:** hardcoded database path, no size display, no instance lock, dev and packaged
+  sharing a folder, a patched vendored copy.
+- **Menu**: no menu bar; Help/About inside the window. **Violation to flag:** a File/Edit/Window-style
+  menu bar with no stated reason, or DevTools enabled in release builds.
+- **Versions**: current .NET LTS and current Avalonia major, checked at creation/audit time
+  (`dotnet --list-sdks`, NuGet), never copied from a sibling repo. **Violation to flag:** more than one
+  major behind.
+- **Also required as for any repo**: AGPL-3.0 `LICENSE` (dependencies checked, `licensing.md` has the
+  .NET recipe), `TODO.md`, docs that state the repo follows KVG_Standards.
+
 ## Windows installer
 
 Applies to the same three stacks as `release-python-gui.yml`,
@@ -273,7 +308,8 @@ exe/zip stays in the release too — the installer is additive.
   installer, portable only" in a way that's now stale, or if it vendors a
   hand-rolled Windows installer/packaging script instead of relying on this.
 - Electron apps are already compliant via `electron-builder`
-  (`release-electron.yml`) — not a gap, don't flag.
+  (`release-electron.yml`), and Avalonia apps via Velopack
+  (`release-avalonia.yml`) — not a gap, don't flag.
 - Godot (`release-godot.yml`) and the Stream Deck plugin workflow
   (`release-streamdeck.yml`) are deliberately out of scope, same as
   theming/icon-gen for Godot — see `game-repos.md`. Not a gap to flag.
@@ -322,6 +358,8 @@ Stream Deck plugin — see below).
     real `flet build` output — verify `_find_bundle_binary`'s layout
     assumptions before trusting it silently in a given app (see the
     package's README).
+  - Avalonia/.NET apps: **Velopack** used directly (no KVG_Standards package) — wiring and
+    violations in `dotnet-avalonia.md` and the "Avalonia / .NET desktop apps" section above.
   - Godot games: [`packages/godot/kvg_update`](https://github.com/gerp93/KVG_Standards/tree/main/packages/godot/kvg_update)
     — **notify-only** (opens the release page, no self-replace; see the
     package's doc comment for why). Godot has no dependency manager that
@@ -413,6 +451,8 @@ this).
   for backup/syncing, without losing data.
 - One implementation per stack, shared and pinned:
   - Python apps: [`packages/python/kvg_dblocation`](https://github.com/gerp93/KVG_Standards/tree/main/packages/python/kvg_dblocation), pinned in `requirements.txt` to a tag (currently `@main`, see the interim exception in `db-location-versioning.md`).
+  - Avalonia/.NET apps: [`packages/dotnet/KvgDbLocation`](https://github.com/gerp93/KVG_Standards/tree/main/packages/dotnet/KvgDbLocation),
+    **vendored** from a tag (not NuGet) — see "Avalonia / .NET desktop apps" above.
   - Electron apps: follow Sweeper's `src/main/dbLocation.ts` as the
     reference pattern directly — same default/effective/set/reset shape,
     same copy-on-relocate behavior, parameterized for the new app's name.
@@ -489,7 +529,7 @@ channel — judge it against these gates, all of which must pass:
   pass the attested gates, so it's `PRE-1.0`. Don't create or fill one in
   on the owner's behalf: the attestations are human sign-offs.
 - M4 requires *a* test-running workflow, not a specific one — there's no
-  shared Node/Python CI workflow yet (only `ci-go.yml`).
+  shared Node/Python CI workflow yet (only `ci-go.yml` and `ci-dotnet.yml`).
 
 ## Repo scope tracking
 
@@ -511,7 +551,8 @@ When asked to check a repo against these standards:
    ships a Windows build via `release-python-gui.yml`/`release-go-gui.yml`/
    `release-flet.yml`), licensing, application menu (if it's Electron),
    logo & branding, release notes, `VERSION_BUMP.md`, database location
-   (if it stores data in SQLite), `TODO.md`, and (if it's an in-scope
+   (if it stores data in SQLite), the Avalonia/.NET section (if it's an
+   Avalonia app), `TODO.md`, and (if it's an in-scope
    versioned app) 1.0 readiness against the checklists above. For a Claude
    Code plugin/mod, use the plugin section above instead of the app items.
 3. List every deviation found — don't silently fix anything in an audit-only

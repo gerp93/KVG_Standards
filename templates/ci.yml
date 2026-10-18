@@ -1,5 +1,6 @@
 # Template: copy to .github/workflows/ci.yml in a Go repo (library or web
-# app). Unlike cut-release.yml/cut-tag.yml, this needs no local logic — the
+# app). For an Avalonia/.NET app call ci-dotnet.yml instead (inputs: project_path,
+# optional run_tests) - see dotnet-avalonia.md. Unlike cut-release.yml/cut-tag.yml, this needs no local logic — the
 # whole thing runs in KVG_Standards via workflow_call, triggered normally.
 
 name: CI

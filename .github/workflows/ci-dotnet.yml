@@ -1,0 +1,44 @@
+name: CI (.NET)
+
+# Reusable build gate for .NET repos, e.g. Avalonia desktop apps released with
+# release-avalonia.yml. Runs on every push/PR the caller wires it to; mirrors
+# ci-go.yml. Tests are opt-in so a repo with no test project yet still gets a
+# build gate.
+
+on:
+  workflow_call:
+    inputs:
+      project_path:
+        description: 'Solution or project to build (.sln or .csproj), relative to the repo root'
+        required: true
+        type: string
+      dotnet_version:
+        description: 'SDK version for actions/setup-dotnet; use the current LTS'
+        required: false
+        type: string
+        default: '10.0.x'
+      run_tests:
+        description: 'Also run `dotnet test` on project_path'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ inputs.dotnet_version }}
+
+      - name: Restore
+        run: dotnet restore "${{ inputs.project_path }}"
+
+      - name: Build
+        run: dotnet build "${{ inputs.project_path }}" -c Release --no-restore -warnaserror
+
+      - name: Test
+        if: ${{ inputs.run_tests }}
+        run: dotnet test "${{ inputs.project_path }}" -c Release --no-build

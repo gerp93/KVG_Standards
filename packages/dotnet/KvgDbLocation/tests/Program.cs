@@ -66,6 +66,23 @@ string Temp(string name) => Path.Combine(Path.GetTempPath(), "kvgdb-" + Guid.New
 }
 
 // --- data directories and file size ---------------------------------------------------
+if (OperatingSystem.IsLinux())
+{
+    // A fresh account has no ~/.local/share. The default GetFolderPath then returns "" and a naive
+    // Path.Combine yields a relative path, so the database lands in the current directory.
+    var fresh = Path.Combine(Path.GetTempPath(), "kvgdb-xdg-" + Guid.NewGuid().ToString("N")[..8]);
+    var savedXdg = Environment.GetEnvironmentVariable("XDG_DATA_HOME");
+    try
+    {
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", fresh);
+        Check(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) == "",
+              "premise: the default GetFolderPath returns \"\" for a data folder that does not exist yet");
+        var resolved = DbLocation.ResolveDataDirectory("MyApp", isDevelopment: false);
+        Check(Path.IsPathRooted(resolved) && resolved == Path.Combine(fresh, "MyApp"),
+              "ResolveDataDirectory gives an absolute path even when ~/.local/share does not exist yet");
+    }
+    finally { Environment.SetEnvironmentVariable("XDG_DATA_HOME", savedXdg); }
+}
 {
     var packaged = DbLocation.ResolveDataDirectory("MyApp", isDevelopment: false);
     var dev = DbLocation.ResolveDataDirectory("MyApp", isDevelopment: true);

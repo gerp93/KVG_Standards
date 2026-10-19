@@ -89,7 +89,7 @@ What it does, per OS (`windows-latest` → `win-x64`, `ubuntu-latest` → `linux
 `<app_name>.AppImage` plus update packages (Velopack makes **no** Linux installer or tar.gz).
 Update files appear in the release too (`*.nupkg`, `RELEASES-*`, `*.json`); the install
 instructions tell users to ignore them. Windows apps install per-user with no admin prompt
-(Velopack's default).
+(Velopack's default) - except KVGuzzler, see "Exception: per-machine install" below.
 
 **Version stamping is not optional.** `release-go-gui.yml` once shipped without it and every
 build reported "update available" forever (see `REPO_SCOPE.md`). Here the tag always becomes
@@ -190,6 +190,39 @@ AGPL-3.0 default; check dependencies per `licensing.md`, whose .NET recipe is
 and Velopack are MIT. App-specific dependencies (a sensor library, a chart library) are checked
 per app.
 
+## Exception: per-machine install with a background collector (KVGuzzler only)
+
+**Approved by the owner, 2026-10-18.** The standard above is per-user and no-admin. KVGuzzler is
+exempt from that part, for one reason: its job is to record power use *continuously*, and a
+per-user app only records while its user is logged in and the app is running. A PC that is logged
+out, or whose user quit the app, was still drawing power. Other Avalonia apps stay per-user; this
+is not a general option.
+
+What changes for KVGuzzler (and only this):
+
+- **Installed per-machine on Windows, with an admin (UAC) prompt at install and at update.**
+  `vpk pack` takes `--instLocation` (default `Either`) and `--msi` (a machine-wide bootstrap),
+  confirmed against the `vpk` 1.2.161 help; the exact per-machine value and what the Velopack
+  update flow does under it are checked at the first Windows release (see "Not yet verified").
+- **A headless collector Windows service** (auto-start at boot, runs without anyone logged in)
+  ships in the same package. It samples the sensors, writes history, and records why it was not
+  sampling (sleep, resume, shutdown) from the service power events. Running with system rights is
+  also what lets it use a hardware-monitoring driver for CPUs and GPUs that expose no unprivileged
+  counters. The Avalonia window is a per-user viewer of that history; it does not need rights.
+- **History lives in `%ProgramData%\<App>`**, written by the service and readable by users, not in
+  the per-user data folder. `KvgDbLocation`'s choose-a-folder feature then applies only to the
+  per-user settings database, not to collected history (a service cannot write into a folder in a
+  user's profile). The three instance-isolation rules above still hold: a development run uses
+  `<app>-dev` under `%ProgramData%`, never the installed service's folder; one collector per data
+  folder; a missing configured path is never silently replaced by an empty database.
+- **Updating a service.** The service has to be stopped before its files are replaced and started
+  again afterwards, from Velopack's update hooks. This is the part most likely to need rework, so it
+  is tested before the first release.
+- **Linux is not covered by this exception.** An AppImage cannot install a system service. The Linux
+  equivalent (a systemd unit, or a user unit) is decided when it is built.
+- **Audit note:** a per-machine install with an admin prompt is *not* a violation for KVGuzzler. It
+  would be for any other Avalonia app.
+
 ## Verified, and not yet
 
 Verified when this was written, by running the real tools (Linux, .NET 10, Avalonia 12.1.4,
@@ -202,6 +235,9 @@ Velopack 1.2.161):
 - The updater calls above compile, and a dev run reports `IsInstalled = false`.
 
 **Not yet verified - check at the first real release:**
+- KVGuzzler's per-machine install: which `--instLocation` value and installer to use, that `Setup.exe`
+  elevates, that a self-update of a per-machine install works (and asks for UAC), and that the
+  collector service is stopped and restarted correctly around it.
 - The Windows leg: `vpk pack` for Windows, `Setup.exe` behavior, the install location. Only Linux
   was run.
 - `vpk upload github` with `--merge` for the second platform, and that the update feed then

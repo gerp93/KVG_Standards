@@ -1137,3 +1137,18 @@ specifically.
   background **collector Windows service**, so power is recorded when nobody is logged in; history lives in
   `%ProgramData%\KVGuzzler`. This is specific to this app and recorded in `dotnet-avalonia.md` ("Exception: per-machine
   install"). Not an audit violation. Unverified until the first Windows release.
+
+## Python desktop app with a headless script and a .deb
+
+### SoSmartButNeverPunctual
+- **New repo, 2026-10-21** ([gerp93/SoSmartButNeverPunctual](https://github.com/gerp93/SoSmartButNeverPunctual), public,
+  AGPL-3.0): keeps Samsung appliance clocks in sync through SmartThings. A Tkinter/PyInstaller desktop app
+  (`release-python-gui.yml`, VisualAssault `v0.3.0`, `kvg_updater` pinned `@main`, logo/icons generated from
+  `assets/logo.png`) over a standard-library-only headless script, `punctual.py`, which also runs on Linux
+  servers from cron.
+- First consumer of [`deb-packaging.md`](deb-packaging.md) / `release-deb.yml` (design approved by the owner
+  2026-10-27): the `.deb` packages `punctual.py` from the same tag as the desktop build.
+- Known: the shared Windows installer is `perMachine`, so the in-app updater needs admin (owner accepted this,
+  recorded in the repo's `TODO.md`); the unsigned PyInstaller exe was quarantined once by Microsoft Defender as
+  `Trojan:Win32/Bearfoos.A!ml` (a machine-learning false positive on an unsigned onefile build). Signing or a
+  `--onedir` build would be a change to `release-python-gui.yml`, not to the app repo.

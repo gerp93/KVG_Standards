@@ -1,0 +1,201 @@
+name: Release (Debian package)
+
+# Reusable workflow: builds a .deb for a Python app from files that already live in the caller's repo,
+# at the SAME commit and tag as the caller's other release builds (e.g. release-python-gui.yml), and
+# attaches it to the SAME GitHub Release. Design and rules: deb-packaging.md.
+#
+# The package is not a second copy of the app: `install_files` names the repo's own source files, the
+# version comes from the tag, and a smoke test installs the .deb and checks that the installed command
+# reports that tag's version (a stale or mismatched package fails the release instead of shipping).
+#
+# Contract: a pure-Python app (standard library only at runtime) whose `entry_point` can be run with
+# `python3 <entry_point> <args>`. Call it AFTER the build job so the release already exists:
+#
+#   deb:
+#     needs: release
+#     uses: gerp93/KVG_Standards/.github/workflows/release-deb.yml@main
+#     with:
+#       version: ${{ needs.version.outputs.new_tag }}
+#       package_name: myapp
+#       command_name: myapp
+#       entry_point: myapp.py
+#       install_files: myapp.py
+#       description: One-line summary of the app
+#       version_file: _version.py
+#     permissions:
+#       contents: write
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3 (the package version is 1.2.3)'
+        required: true
+        type: string
+      package_name:
+        description: 'Debian package name: lowercase letters, digits, "+", "-" and "." only, e.g. sosmartbutneverpunctual'
+        required: true
+        type: string
+      command_name:
+        description: 'Command installed into /usr/bin that runs the app, e.g. punctual'
+        required: true
+        type: string
+      entry_point:
+        description: 'Python file (one of install_files) the command runs, e.g. punctual.py'
+        required: true
+        type: string
+      install_files:
+        description: 'Space-separated files or directories from the repo, installed into /usr/lib/<package_name>/ with their relative paths kept, e.g. "punctual.py"'
+        required: true
+        type: string
+      description:
+        description: 'One-line package description'
+        required: true
+        type: string
+      version_file:
+        description: 'If set, write __version__ = "X.Y.Z" to this path before packaging (same as release-python-gui.yml, e.g. _version.py) and install it too'
+        required: false
+        type: string
+        default: ''
+      depends:
+        description: 'Debian Depends field'
+        required: false
+        type: string
+        default: 'python3 (>= 3.9)'
+      recommends:
+        description: 'Debian Recommends field (optional extras, e.g. a GUI toolkit)'
+        required: false
+        type: string
+        default: ''
+      maintainer:
+        description: 'Debian Maintainer field'
+        required: false
+        type: string
+        default: 'gerp93 <gerp93@users.noreply.github.com>'
+      smoke_args:
+        description: 'Arguments for the post-install check; the command must print the package version'
+        required: false
+        type: string
+        default: '--version'
+      publish:
+        description: 'Attach the .deb to the GitHub Release for the tag. Set false to only build and test it (the .deb is still uploaded as a workflow artifact)'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  deb:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      PACKAGE_NAME: ${{ inputs.package_name }}
+      COMMAND_NAME: ${{ inputs.command_name }}
+      ENTRY_POINT: ${{ inputs.entry_point }}
+      INSTALL_FILES: ${{ inputs.install_files }}
+      DESCRIPTION: ${{ inputs.description }}
+      VERSION_FILE: ${{ inputs.version_file }}
+      DEPENDS: ${{ inputs.depends }}
+      RECOMMENDS: ${{ inputs.recommends }}
+      MAINTAINER: ${{ inputs.maintainer }}
+      SMOKE_ARGS: ${{ inputs.smoke_args }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          VER="${VERSION#v}"
+          [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version must look like 1.2.3 or v1.2.3, got '$VERSION'" >&2; exit 1; }
+          [[ "$PACKAGE_NAME" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "invalid package_name '$PACKAGE_NAME'" >&2; exit 1; }
+          [[ "$COMMAND_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "invalid command_name '$COMMAND_NAME'" >&2; exit 1; }
+          echo "VER=$VER" >> "$GITHUB_ENV"
+
+      - name: Write version file
+        if: inputs.version_file != ''
+        run: echo "__version__ = \"${VER}\"" > "$VERSION_FILE"
+
+      - name: Assemble package tree
+        run: |
+          set -euo pipefail
+          ROOT="build/deb/${PACKAGE_NAME}_${VER}_all"
+          LIB="$ROOT/usr/lib/$PACKAGE_NAME"
+          DOC="$ROOT/usr/share/doc/$PACKAGE_NAME"
+          mkdir -p "$LIB" "$DOC" "$ROOT/usr/bin" "$ROOT/DEBIAN"
+
+          # The app's own source files, straight from this checkout: the single source of truth.
+          FILES="$INSTALL_FILES"
+          [ -z "$VERSION_FILE" ] || FILES="$FILES $VERSION_FILE"
+          for f in $FILES; do
+            [ -e "$f" ] || { echo "install_files entry not found in the repo: $f" >&2; exit 1; }
+            mkdir -p "$LIB/$(dirname "$f")"
+            cp -a "$f" "$LIB/$f"
+          done
+          [ -f "$LIB/$ENTRY_POINT" ] || { echo "entry_point '$ENTRY_POINT' is not one of install_files" >&2; exit 1; }
+          find "$LIB" -name '__pycache__' -prune -exec rm -rf {} +
+
+          printf '#!/bin/sh\nexec python3 /usr/lib/%s/%s "$@"\n' "$PACKAGE_NAME" "$ENTRY_POINT" > "$ROOT/usr/bin/$COMMAND_NAME"
+          chmod 0755 "$ROOT/usr/bin/$COMMAND_NAME"
+
+          [ ! -f LICENSE ] || cp LICENSE "$DOC/copyright"
+          [ ! -f README.md ] || cp README.md "$DOC/README.md"
+          find "$ROOT" -type d -exec chmod 0755 {} +
+          find "$LIB" "$DOC" -type f -exec chmod 0644 {} +
+
+          {
+            echo "Package: $PACKAGE_NAME"
+            echo "Version: $VER"
+            echo "Section: utils"
+            echo "Priority: optional"
+            echo "Architecture: all"
+            echo "Depends: $DEPENDS"
+            [ -z "$RECOMMENDS" ] || echo "Recommends: $RECOMMENDS"
+            echo "Maintainer: $MAINTAINER"
+            echo "Homepage: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+            echo "Description: $DESCRIPTION"
+          } > "$ROOT/DEBIAN/control"
+
+          mkdir -p release_out
+          dpkg-deb --build --root-owner-group "$ROOT" "release_out/${PACKAGE_NAME}_${VER}_all.deb"
+          echo "DEB=release_out/${PACKAGE_NAME}_${VER}_all.deb" >> "$GITHUB_ENV"
+
+      - name: Show what was built
+        run: |
+          dpkg-deb --info "$DEB"
+          dpkg-deb --contents "$DEB"
+
+      # Drift guard: install the package like a user would and make sure it is the tag's version.
+      - name: Smoke test (install, run, remove)
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y "./$DEB"
+          OUT="$("$COMMAND_NAME" $SMOKE_ARGS 2>&1)"
+          echo "$COMMAND_NAME $SMOKE_ARGS -> $OUT"
+          case "$OUT" in
+            *"$VER"*) ;;
+            *) echo "the installed command did not report version $VER; the package does not match the tag" >&2; exit 1 ;;
+          esac
+          sudo apt-get remove -y "$PACKAGE_NAME"
+          if command -v "$COMMAND_NAME" >/dev/null; then echo "$COMMAND_NAME is still installed after removing the package" >&2; exit 1; fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.package_name }}-deb
+          path: ${{ env.DEB }}
+
+      - name: Attach to the GitHub Release
+        if: inputs.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: ${{ env.DEB }}
+          append_body: true
+          body: |
+
+            ## Debian / Ubuntu
+
+            Download `${{ env.PACKAGE_NAME }}_${{ env.VER }}_all.deb`, then install (or upgrade) it with
+            `sudo apt install ./${{ env.PACKAGE_NAME }}_${{ env.VER }}_all.deb`. It uses the system `python3` and installs the
+            `${{ env.COMMAND_NAME }}` command. Remove it with `sudo apt remove ${{ env.PACKAGE_NAME }}`; your settings are kept.

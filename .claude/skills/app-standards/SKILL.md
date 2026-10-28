@@ -332,6 +332,25 @@ exe/zip stays in the release too — the installer is additive.
   these; do flag one that needed `perUser` semantics and instead worked
   around it with a bespoke installer script (the violation above).
 
+## Debian package (.deb)
+
+Applies to a Python app that should also install on Debian/Ubuntu machines (servers, Raspberry Pi) and whose
+runtime is standard-library-only. Source of truth: [`deb-packaging.md`](https://github.com/gerp93/KVG_Standards/blob/main/deb-packaging.md).
+
+- A `deb` job calling `release-deb.yml` sits in **both** `auto-release.yml` and `cut-release.yml`, with
+  `needs:` on the build job, so the package is built from the same commit and tag as the desktop build and is
+  attached to the same release. `package_name`, `command_name`, `entry_point`, `install_files`,
+  `description` and `version_file` are the app's own; `version_file` must match the desktop build's.
+- The package contains the **repo's own files** (`install_files`). It must never be a second copy of the
+  app, and the app must not carry a hand-maintained `debian/` or packaging copy of its code.
+- The workflow's smoke test (install, run `<command> --version`, require the tag's version, remove) is the
+  drift guard. Don't disable it or loosen it to hide a mismatch.
+- **Violation to flag:** a repo that ships a `.deb` (or a hand-copied script for Debian) built outside
+  `release-deb.yml`, or from a separate copy of the code.
+- **Violation to flag:** a `.deb` job missing from only one of `auto-release.yml`/`cut-release.yml`.
+- **Not a violation:** a repo with no `.deb` at all. It is optional; only apps that run on Debian machines
+  need it. Apps with pip dependencies are out of scope: bring that design here first.
+
 ## Update-check
 
 Applies to any repo in the "Desktop GUI app / plugin" category above that

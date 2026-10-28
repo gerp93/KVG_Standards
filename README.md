@@ -87,6 +87,13 @@ ships a seed copy of (games/) from being clobbered on every reinstall.
 
 
 
+## Debian package (.deb)
+
+A Python app that also runs on Debian/Ubuntu servers ships a `.deb` next to its other release assets, built
+by `release-deb.yml` from the **same source files, commit and tag** as the desktop build, with a smoke test that
+installs it and checks it reports the tag's version, so it cannot drift from the desktop app. See
+[`deb-packaging.md`](deb-packaging.md).
+
 ## Update-check
 
 Self-update (check GitHub Releases, download, replace the running build —
@@ -168,6 +175,7 @@ evaluation results are in `REPO_SCOPE.md`.
 | Workflow | For | Used by |
 |---|---|---|
 | `release-python-gui.yml` | PyInstaller-packaged Python GUI apps | KVGrainy, KVGroove, kvg_converter |
+| `release-deb.yml` | A `.deb` for a standard-library-only Python app, built from the same files, commit and tag as its other release builds (add after the build job); see [`deb-packaging.md`](deb-packaging.md) | SoSmartButNeverPunctual |
 | `release-go-gui.yml` | Wails (Go) desktop apps | gameshell-deploy (gui/) |
 | `release-electron.yml` | Electron desktop apps; `app_dir` for an app in a subfolder, `skip_release_notes` when sharing a release with a plugin | sweeper, Shipwatch (app/) |
 | `release-flet.yml` | Flet desktop apps | kvgenius |

@@ -1,0 +1,100 @@
+name: CI and deploy (Cloudflare Worker)
+
+# Reusable gate-and-deploy for a Cloudflare Worker repo (no release artifact; the
+# deploy IS the release). First consumer: RecipeConnector. See cloudflare-workers.md.
+#
+#   Pull request:                 typecheck + test only. The deploy job is skipped, so the
+#                                 Cloudflare token is never given to code from a PR.
+#   Push to deploy_branch:        typecheck + test, then `wrangler deploy`.
+#   workflow_dispatch on that branch: the same, to redeploy without a change.
+#
+# The gate lives here, not in the caller, so every caller gets it. `github` in a called
+# workflow is the caller's context, so these refs and event names are the caller's.
+#
+# The caller must trigger on pull_request, push (deploy_branch) and workflow_dispatch
+# (templates/deploy-cloudflare-worker.yml) and pass the one secret explicitly:
+#   secrets:
+#     CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+# Don't use `secrets: inherit`. The Worker's own secrets (API keys etc.) live in Cloudflare
+# and are not touched by a deploy; never put them in the repo or in GitHub.
+
+on:
+  workflow_call:
+    inputs:
+      working_directory:
+        description: 'Directory holding package.json and wrangler.toml, relative to the repo root'
+        required: false
+        type: string
+        default: '.'
+      node_version:
+        required: false
+        type: string
+        default: '24'
+      deploy_branch:
+        description: 'Branch whose pushes (and manual runs) deploy'
+        required: false
+        type: string
+        default: 'main'
+      run_typecheck:
+        description: 'Run `npm run typecheck` (the repo needs that script)'
+        required: false
+        type: boolean
+        default: true
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        description: 'Cloudflare API token ("Edit Cloudflare Workers" template, limited to the one account). Only the deploy job reads it.'
+        required: false
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working_directory }}/package-lock.json
+
+      - run: npm ci
+
+      - name: Typecheck
+        if: ${{ inputs.run_typecheck }}
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+  deploy:
+    needs: test
+    if: ${{ github.event_name != 'pull_request' && github.ref == format('refs/heads/{0}', inputs.deploy_branch) }}
+    runs-on: ubuntu-latest
+    # One deploy at a time; a newer one waits instead of racing.
+    concurrency:
+      group: deploy-cloudflare-worker
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: ${{ inputs.working_directory }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: npm
+          cache-dependency-path: ${{ inputs.working_directory }}/package-lock.json
+
+      - run: npm ci
+
+      - name: Deploy
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

@@ -17,6 +17,8 @@ not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Claude Code plugins** are a separate category with their own standard, [`claude-plugins.md`](claude-plugins.md), and aren't part of the 19-app matrix below. Tracked here: [Shipwatch](https://github.com/gerp93/Shipwatch) (mod; build/PR dashboard; wired 2026-10-05 — see its section at the end).
 
+**Cloudflare Workers** (MCP connectors and the like) are another separate category, [`cloudflare-workers.md`](cloudflare-workers.md). Tracked here: RecipeConnector (see its section at the end).
+
 **Static sites** (the `directory-engine` generator and the niche repos built with it) are another separate category with their own standard, [`static-sites.md`](static-sites.md). Tracked here: [directory-engine](https://github.com/gerp93/directory-engine) (engine; see its section at the end).
 
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
@@ -1113,6 +1115,19 @@ specifically.
   Electron items, DB location, logo generation, release notes, 1.0 readiness.
 - Open: reusable build/publish workflow for niche repos (engine is private, so it needs a
   cross-repo token design), and the first `cut-tag.yml` run so niches can pin a tag.
+
+## Cloudflare Workers
+
+### RecipeConnector
+- **Onboarded 2026-11-08** ([gerp93/RecipeConnector](https://github.com/gerp93/RecipeConnector), private, AGPL-3.0): an MCP
+  server on a Cloudflare Worker (free plan) that lets Claude voice chat read, search and save recipes in the public
+  `gerp93/recipes` repo. First app on the new category, [`cloudflare-workers.md`](cloudflare-workers.md), with
+  `deploy-cloudflare-worker.yml` and `templates/deploy-cloudflare-worker.yml`. Design added at the owner's request; still wants
+  the owner's sign-off per `CLAUDE.md`'s "New tech stacks" process.
+- Applies: CI/deploy via the shared workflow, licensing (`LICENSE` added), `TODO.md`, docs state it follows KVG_Standards.
+- Not applicable by category: theming, update-check, installer, Electron items, DB location, logo placement, release notes,
+  `auto-release.yml`/`cut-release.yml`/`VERSION_BUMP.md` (no release artifact), 1.0 readiness.
+- Unverified: the shared workflow's first real run (the repo's previous local workflow was verified by a manual deploy).
 
 ## .NET / Avalonia desktop apps
 

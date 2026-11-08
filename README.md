@@ -35,6 +35,13 @@ category of their own: an engine repo plus one thin repo per niche site. See
 [`static-sites.md`](static-sites.md) for the rules, including the per-niche theming
 decision and the not-yet-standardized build/publish step.
 
+## Cloudflare Workers
+
+A Worker that deploys with wrangler (for example an MCP server for Claude) is a category
+of its own: no release artifact, merging to `main` is the release. See
+[`cloudflare-workers.md`](cloudflare-workers.md) for what lives where (secrets stay in
+Cloudflare) and the pipeline. Reference: [gerp93/RecipeConnector](https://github.com/gerp93/RecipeConnector).
+
 ## .NET / Avalonia desktop apps
 
 C# desktop apps built on Avalonia (Windows + Linux) are a category of their own: packaged and
@@ -186,6 +193,7 @@ evaluation results are in `REPO_SCOPE.md`.
 | `ci-go.yml` | Go build+vet gate (library, web app or generator); optional `run_tests: true` also runs `go test ./...` | gameshell-framework, card-judge, timeline-trivia, directory-engine |
 | `release-claude-plugin.yml` | Claude Code plugins and mods (no build artifact; validate, test, release with install commands) | Shipwatch |
 | `ci-claude-plugin.yml` | Claude Code plugin validate+test gate | Shipwatch |
+| `deploy-cloudflare-worker.yml` | Cloudflare Worker: typecheck+test on PRs, then `wrangler deploy` on push to `main` (no release artifact) | RecipeConnector |
 
 Claude Code plugins and mods have their own category: see [`claude-plugins.md`](claude-plugins.md).
 

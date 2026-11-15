@@ -774,9 +774,9 @@ logging, a startup watchdog + its own follow-up fix, and the Electron
   VERSION_BUMP.md all re-confirmed intact.
 
 ### KVG_RGB
-- **Not previously tracked in this file** — added to scope 2026-08-15 after
-  the `app-standards` skill was found to mischaracterize it (see open
-  question below). It's a real, separate app: an OpenRGB device controller
+- **Not previously tracked in this file** ([gerp93/KVG_RGB](https://github.com/gerp93/KVG_RGB))
+  — added to scope 2026-08-15 after the `app-standards` skill was found to
+  mischaracterize it (see open question below). It's a real, separate app: an OpenRGB device controller
   (Python CLI + Flask web UI + Windows installer/exe), unrelated to
   VisualAssault/UI theming despite the name.
 - Audited 2026-08-15 (repo inspection only, no fixes applied — none of this
@@ -839,7 +839,8 @@ logging, a startup watchdog + its own follow-up fix, and the Electron
   the standing "only re-check repos with recent activity" rule.
 
 ### radbot
-- **New repo, discovered 2026-08-17** (created 2026-08-13). Agentic control
+- **New repo, discovered 2026-08-17** ([gerp93/radbot](https://github.com/gerp93/radbot),
+  created 2026-08-13). Agentic control
   stack for a retrofitted Toymax RAD 1.0 robot — a Raspberry Pi + Pi Pico
   hardware project: Python control/deliberation code (Claude-driven
   planning, a reflex layer, a skills layer) validated against a simulator,

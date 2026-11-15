@@ -1,0 +1,31 @@
+# Template: copy to .github/workflows/ci.yml in a Cloudflare Worker repo (an MCP server or
+# other Worker that deploys with wrangler). Unlike cut-release.yml, the logic all lives in
+# KVG_Standards; the triggers stay here because GitHub requires them in the calling repo.
+#
+#   Pull request:  typecheck + test only. No secret reaches the run.
+#   Push to main:  typecheck + test, then wrangler deploy (merging a PR is a push).
+#   Run by hand:   Actions tab, "CI and deploy", Run workflow (redeploys main).
+#
+# One repo secret is needed: CLOUDFLARE_API_TOKEN (see cloudflare-workers.md). Pass it
+# explicitly as below; don't use `secrets: inherit`.
+
+name: CI and deploy
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  worker:
+    uses: gerp93/KVG_Standards/.github/workflows/deploy-cloudflare-worker.yml@main
+    with:
+      node_version: '24' # match the repo's package.json engines / .nvmrc
+      # working_directory: .   # where package.json and wrangler.toml live
+      # run_typecheck: true    # set false if the repo has no `typecheck` script
+    secrets:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

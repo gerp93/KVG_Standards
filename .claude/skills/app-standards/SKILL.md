@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), Claude Code plugins/mods (version-less, marketplace-installed, validate+test CI), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), Avalonia/.NET desktop apps (Velopack release+update, vendored VisualAssault theme and KvgDbLocation), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), Claude Code plugins/mods (version-less, marketplace-installed, validate+test CI), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), Cloudflare Workers/MCP connectors (deploy on push to main, secrets stay in Cloudflare), Avalonia/.NET desktop apps (Velopack release+update, vendored VisualAssault theme and KvgDbLocation), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -171,6 +171,7 @@ First classify the repo — the shape of "release" differs by category:
 | Desktop GUI app / plugin | Ships a binary/installer/plugin package end users download | **Both** `templates/auto-release.yml` (fires on every push to `main`) and `templates/cut-release.yml` (manual, explicit version) — see below. Calling the matching `release-*.yml` build variant (`release-python-gui.yml` for PyInstaller, `release-go-gui.yml` for Wails, `release-electron.yml` for Electron, `release-flet.yml` for Flet, `release-avalonia.yml` for Avalonia/.NET, `release-streamdeck.yml` for a Stream Deck plugin) |
 | Godot game | GDScript project (no C#/.NET), ships a native desktop export end users download | Same as Desktop GUI app/plugin, calling `release-godot.yml` — see `game-repos.md` for the full breakdown (theming and icon generation are not yet covered for this category). |
 | Claude Code plugin / mod | `.claude-plugin/plugin.json`; installed from the repo through a marketplace, no build artifact | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-claude-plugin.yml` (needs `plugin_name`), plus `templates/ci-claude-plugin.yml` as `ci.yml`. Omit `version` from the manifest and marketplace entry. Full rules: `claude-plugins.md`. With a companion Electron app in `app/`: the `*-plugin-app.yml` templates instead |
+| Cloudflare Worker (MCP connector etc.) | `wrangler.toml`, deploys to Cloudflare; no downloadable artifact | **Neither** `auto-release.yml` nor `cut-release.yml`. `templates/deploy-cloudflare-worker.yml` as `ci.yml`, calling `deploy-cloudflare-worker.yml` (typecheck+test on PRs, `wrangler deploy` on push to `main`). Full rules: `cloudflare-workers.md` |
 | Static site engine / niche site | `directory-engine` (Go generator, tag-only release) or a niche repo with `site.yaml` + listings, built by the engine, published not released | Engine: `templates/ci.yml` with `working_directory: .` and `run_tests: true`, plus `templates/cut-tag.yml`. Niche: no release pipeline; `directory-engine validate -strict` in CI. Full rules: `static-sites.md` |
 | Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. This is the "New tech stacks" case above — ask the human before designing a new pattern. |
 
@@ -231,6 +232,25 @@ placement are N/A).
   code changed, calling `release-electron.yml` with `app_dir: app` and `skip_release_notes: true`).
   **Violation to flag:** a `package.json` at the repo root of a plugin repo, or a separate release
   tag for the app. The Electron items (theming, update-check, menu, logo) are audited against `app/`.
+
+## Cloudflare Workers (MCP connectors)
+
+Source of truth: [`cloudflare-workers.md`](https://github.com/gerp93/KVG_Standards/blob/main/cloudflare-workers.md).
+Reference repo: [gerp93/RecipeConnector](https://github.com/gerp93/RecipeConnector). No binary, so most
+app standards don't apply (theming, logo placement, update-check, installer, Electron items, DB location,
+release notes, 1.0 readiness). Merging to `main` is the release.
+
+- **CI/deploy**: `ci.yml` calls `deploy-cloudflare-worker.yml`, triggers on `pull_request`, `push` to `main`
+  and `workflow_dispatch`, passes `CLOUDFLARE_API_TOKEN` explicitly. **Violations to flag:** a local copy
+  of the test/deploy logic, `secrets: inherit`, a deploy that can run on a pull request.
+- **Secrets**: the Worker's own secrets live in Cloudflare (`wrangler secret put`); only `CLOUDFLARE_API_TOKEN`
+  is in GitHub. **Violation to flag:** any secret value in the repo or in committed `.dev.vars`/`.env`.
+- **No release pipeline**: **Violation to flag:** `auto-release.yml`, `cut-release.yml` or `VERSION_BUMP.md`
+  in a Worker repo (nothing to release; `package.json` stays `private`).
+- **Hygiene**: `package-lock.json` committed, no unused dependencies, `typecheck` and `test` scripts.
+- **Docs**: README has a "Coming back to this later" section (what it is, how to change it, what lives where
+  and what to do if each secret breaks) and, for an MCP server, says tool changes need the connector re-added.
+- **Also required as for any repo**: AGPL-3.0 `LICENSE`, `TODO.md`, docs that state the repo follows KVG_Standards.
 
 ## Static sites (directory engine)
 

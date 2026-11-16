@@ -9,10 +9,10 @@ be true; a future session should periodically re-audit each repo against
 it, note actual compliance/drift here (or back in a per-standard section
 below), and keep it current as repos are added, retired, or reclassified.
 
-Scope: the 19 active app repos (KVGrainy, KVGroove, gameshell-deploy,
+Scope: the 20 active app repos (KVGrainy, KVGroove, gameshell-deploy,
 Sweeper, KVG_Converter, KVGenius, KVGauge, gameshell-framework, card-judge,
 timeline-trivia, TrackDraft, airport, KVG_RGB, radbot, RolePlaymate,
-FileShuttle, Bracketeer, hArdpoInt, KVGuzzler). VisualAssault is the theme producer,
+FileShuttle, Bracketeer, hArdpoInt, KVGuzzler, Playtime-ROI). VisualAssault is the theme producer,
 not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Claude Code plugins** are a separate category with their own standard, [`claude-plugins.md`](claude-plugins.md), and aren't part of the 19-app matrix below. Tracked here: [Shipwatch](https://github.com/gerp93/Shipwatch) (mod; build/PR dashboard; wired 2026-10-05 — see its section at the end).
@@ -50,6 +50,7 @@ That check has been skipped every run since; a human (or a session with
 | Bracketeer | Electron GUI | Yes (`themes.css` vendored @ `v0.2.0`, same pattern as FileShuttle) | Yes (AGPL-3.0) | Yes — `electron-updater` wired in `src/main/main.ts` (`setupAutoUpdater`/`checkForUpdatesNow`), and (2026-09-13) actually surfaced in the Settings UI with a "Check for Updates" button, version display, and status messages — was previously wired but not exposed | Yes — added 2026-09-13, adopting the pattern from RolePlaymate (`src/main/menu.ts`); second adopter after RolePlaymate itself | TBD — no `assets/logo.png` at all; `scripts/generate-icons.js` exists and matches the standard Node/sharp script but has nothing to run against yet (its own header comment says so); gap is tracked in Bracketeer's own `TODO.md` | Yes — `auto-release.yml`/`cut-release.yml` both call `release-electron.yml@main`, which patches release notes automatically | Yes | Yes — `src/main/dbLocation.ts` follows Sweeper's reference pattern, Settings UI exposes current path/choose existing/choose new/reset | Yes |
 | hArdpoInt | Electron GUI — **new repo, added to scope 2026-09-28** | Yes — vendored via `scripts/update-visual-assault-css.sh`, pinned `v0.2.0` | Yes (AGPL-3.0, all deps checked clean) | Yes (`electron-updater`, silent check + Help-menu item) | Fix opened, not yet merged — [PR #1](https://github.com/gerp93/hArdpoInt/pull/1) (draft) adds the missing context-menu fallback for cut/copy/paste/select-all and gates dev-tools menu items behind `!app.isPackaged`; the View+Help template itself was already correct | Yes — full placement checklist verified (source mark, `scripts/generate-icons.js`, README image, in-app window icon, in-app UI usage, packaged-binary icon) | Yes (inherits `release-electron.yml`'s patch job) | Yes | N/A — no SQLite; persists a single JSON config file (`app-config.json` in Electron `userData`) with mount configs only | Yes |
 | KVGuzzler | Avalonia/.NET GUI — **new repo, added to scope 2026-10-18**, see [`dotnet-avalonia.md`](dotnet-avalonia.md) | Yes — VisualAssault Avalonia package, vendored from a tag | Yes (AGPL-3.0 planned; deps to check) | Yes — Velopack, used directly | N/A by design — no menu bar, in-window Help/About | TBD — needs real artwork, not fabricated | Yes (inherits `release-avalonia.yml`'s install-instructions patch step) | Yes | Yes — `packages/dotnet/KvgDbLocation`, vendored | Yes |
+| Playtime-ROI | Electron GUI — **new repo, added to scope 2026-11-16** | Yes — `themes.css` vendored via `scripts/update-visual-assault-css.sh` | Yes (AGPL-3.0) | Yes (`electron-updater`) | Yes — `src/main/menu.ts` (View+Help, dev-tools gated) | TBD — no `assets/logo.png` yet; `scripts/generate-icons.js` wired but inert; tracked in its `TODO.md`, not fabricated | Yes (`auto-release.yml`/`cut-release.yml` call `release-electron.yml@main`) | Yes | Yes — `src/main/dbLocation.ts`, Settings UI (`node:sqlite`) | Yes |
 
 **Licensing standard now exists** — [`licensing.md`](licensing.md): AGPL-3.0
 by default, checked against each repo's actual dependencies (a dependency
@@ -1138,6 +1139,9 @@ specifically.
   background **collector Windows service**, so power is recorded when nobody is logged in; history lives in
   `%ProgramData%\KVGuzzler`. This is specific to this app and recorded in `dotnet-avalonia.md` ("Exception: per-machine
   install"). Not an audit violation. Unverified until the first Windows release.
+
+### Playtime-ROI
+- **New repo, 2026-11-15** ([gerp93/Playtime-ROI](https://github.com/gerp93/Playtime-ROI), public, AGPL-3.0): Electron app showing cost-per-hour for a Steam library. First-pass audit 2026-11-16: compliant on theming, licensing, update-check, menu, DB location, release CI and TODO/VERSION_BUMP; only gap is the missing `assets/logo.png` (documented in its `TODO.md`).
 
 ## Python desktop app with a headless script and a .deb
 

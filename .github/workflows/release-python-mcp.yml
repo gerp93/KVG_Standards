@@ -1,0 +1,110 @@
+name: Release (Python MCP server)
+
+# Reusable release workflow for uv-managed Python packages that have no GUI
+# and no PyInstaller build: MCP servers, CLIs, libraries. New variant (first
+# consumer: ColorBookForge). See python-mcp-servers.md.
+#
+# There is no installer. The artifacts are a wheel and an sdist built with
+# `uv build`, attached to the GitHub Release. Users install straight from the
+# tag with `uv tool install git+https://github.com/<repo>@<tag>` or run it with
+# `uvx --from git+https://github.com/<repo>@<tag> <command>`, so the release
+# is a stamped, tested snapshot, not a separate download channel.
+#
+# The version in pyproject.toml is a placeholder: the tag is the source of
+# truth. The workflow stamps the tag's version into the build with
+# `uv version --frozen` (not committed), so the wheel's filename and metadata
+# match the release. Callers tag first (see templates/auto-release.yml and
+# templates/cut-release.yml), then call this with that tag.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3'
+        required: true
+        type: string
+      package_name:
+        description: 'Distribution name as in pyproject.toml, e.g. colorbookforge'
+        required: true
+        type: string
+      command:
+        description: 'Console script the package installs, used in the install blurb; defaults to package_name'
+        required: false
+        type: string
+        default: ''
+      project_dir:
+        description: 'Directory holding pyproject.toml, relative to the repo root'
+        required: false
+        type: string
+        default: '.'
+      python_version:
+        required: false
+        type: string
+        default: '3.11'
+      run_lint:
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ${{ inputs.project_dir }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.version }}
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install dependencies from the lockfile
+        run: uv sync --locked --all-groups
+
+      - name: Lint
+        if: ${{ inputs.run_lint }}
+        run: uv run ruff check .
+
+      - name: Test
+        run: uv run pytest
+
+      - name: Stamp the tag's version into the build
+        env:
+          VERSION: ${{ inputs.version }}
+        run: uv version "${VERSION#v}" --frozen
+
+      - name: Build wheel and sdist
+        run: uv build
+
+      - name: Work out the command name
+        id: names
+        env:
+          PACKAGE_NAME: ${{ inputs.package_name }}
+          COMMAND: ${{ inputs.command }}
+        run: echo "command=${COMMAND:-$PACKAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          name: ${{ inputs.package_name }} ${{ inputs.version }}
+          generate_release_notes: true
+          files: ${{ inputs.project_dir }}/dist/*
+          body: |
+            ## Installing
+
+            Needs [uv](https://docs.astral.sh/uv/). From a terminal:
+
+                uv tool install git+https://github.com/${{ github.repository }}@${{ inputs.version }}
+
+            Or run it without installing:
+
+                uvx --from git+https://github.com/${{ github.repository }}@${{ inputs.version }} ${{ steps.names.outputs.command }}
+
+            The wheel and sdist attached below are the same build, for installing offline with `uv tool install <wheel>`.

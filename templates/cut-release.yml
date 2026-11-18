@@ -72,6 +72,7 @@ jobs:
     #   release-electron.yml    (Electron)
     #   release-flet.yml        (Flet)
     #   release-streamdeck.yml  (Elgato Stream Deck plugin)
+    #   release-python-mcp.yml  (uv Python package, no GUI: MCP server/CLI; needs package_name)
     #   release-claude-plugin.yml (Claude Code plugin/mod — no build artifact; needs plugin_name)
     #   release-godot.yml       (Godot desktop game — GDScript only, no C#/.NET)
     #   release-avalonia.yml    (Avalonia/.NET desktop app — Velopack; needs app_name, project_path, exe_name)

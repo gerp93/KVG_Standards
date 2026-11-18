@@ -17,6 +17,8 @@ not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Claude Code plugins** are a separate category with their own standard, [`claude-plugins.md`](claude-plugins.md), and aren't part of the 19-app matrix below. Tracked here: [Shipwatch](https://github.com/gerp93/Shipwatch) (mod; build/PR dashboard; wired 2026-10-05 — see its section at the end).
 
+**Debian-package tools** (headless scripts + systemd timers, shipped as a `.deb`, no GUI) are another separate category, covered by [`deb-packaging.md`](deb-packaging.md) (theming, logo, update-check, installer, menu and DB location are N/A). Tracked here: [Netwatch](https://github.com/gerp93/Netwatch) (home-network monitor for the house server; added 2026-11-18, see its section at the end).
+
 **Static sites** (the `directory-engine` generator and the niche repos built with it) are another separate category with their own standard, [`static-sites.md`](static-sites.md). Tracked here: [directory-engine](https://github.com/gerp93/directory-engine) (engine; see its section at the end).
 
 **Python MCP servers / headless uv packages** are another separate category with their own standard, [`python-mcp-servers.md`](python-mcp-servers.md) (no GUI, so theming, logo, update-check and installer are N/A). Tracked here: [ColorBookForge](https://github.com/gerp93/ColorBookForge) (MCP server for KDP coloring-book interiors; added 2026-11-18, first consumer of `release-python-mcp.yml` and `ci-python.yml`).
@@ -1155,3 +1157,22 @@ specifically.
   recorded in the repo's `TODO.md`); the unsigned PyInstaller exe was quarantined once by Microsoft Defender as
   `Trojan:Win32/Bearfoos.A!ml` (a machine-learning false positive on an unsigned onefile build). Signing or a
   `--onedir` build would be a change to `release-python-gui.yml`, not to the app repo.
+
+## Debian-package tools
+
+### Netwatch
+- **Added 2026-11-18** ([gerp93/Netwatch](https://github.com/gerp93/Netwatch), **private** by the owner's choice,
+  AGPL-3.0): per-minute connection checks (ping, DNS, TCP push-port, HTTPS) and a 2-hourly speed test, run by
+  systemd timers as a `netwatch` user, plus a `netwatch-report` command. Shell scripts, no GUI, no pip dependencies.
+- Category: scripts + systemd + `.deb`, the system-package shape of [`deb-packaging.md`](deb-packaging.md)
+  (`release-deb.yml` extended with `install_map`, `symlinks`, `conffiles`, `scripts_dir`, `version_plain_file`).
+  Both `auto-release.yml` and `cut-release.yml` (tag job, then the `deb` job, which creates the Release), plus a
+  `VERSION_BUMP.md`, a `ci.yml` (shellcheck, `tests/run.sh`, and the package built with `publish: false` then
+  installed, upgraded over an old `install.sh` box, removed and purged), `TODO.md`, AGPL-3.0 `LICENSE`, and a README
+  that states it follows KVG_Standards.
+- N/A by design: theming, logo, update-check (apt upgrades it), installer, application menu, DB location (CSV logs),
+  1.0 readiness (not a desktop GUI app).
+- Known: the repo is private, so the box cannot download a release asset itself; the `.deb` goes
+  `gh release download` on the PC, `scp`, `apt install` (documented in its README). The shared `.deb` has no long
+  description or changelog (`lintian` errors `extended-description-is-empty`, `no-changelog`), same as
+  SoSmartButNeverPunctual's. Not yet run on Debian 13 or on the house server (see its `TODO.md`).

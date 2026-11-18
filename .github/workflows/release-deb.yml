@@ -1,15 +1,23 @@
 name: Release (Debian package)
 
-# Reusable workflow: builds a .deb for a Python app from files that already live in the caller's repo,
-# at the SAME commit and tag as the caller's other release builds (e.g. release-python-gui.yml), and
-# attaches it to the SAME GitHub Release. Design and rules: deb-packaging.md.
+# Reusable workflow: builds a .deb from files that already live in the caller's repo, at the SAME commit
+# and tag as the caller's other release builds (e.g. release-python-gui.yml), and attaches it to the SAME
+# GitHub Release. Design and rules: deb-packaging.md.
 #
-# The package is not a second copy of the app: `install_files` names the repo's own source files, the
-# version comes from the tag, and a smoke test installs the .deb and checks that the installed command
-# reports that tag's version (a stale or mismatched package fails the release instead of shipping).
+# The package is not a second copy of the app: it is assembled from the repo's own files, the version
+# comes from the tag, and a smoke test installs the .deb and checks that the installed command reports that
+# tag's version (a stale or mismatched package fails the release instead of shipping).
 #
-# Contract: a pure-Python app (standard library only at runtime) whose `entry_point` can be run with
-# `python3 <entry_point> <args>`. Call it AFTER the build job so the release already exists:
+# Two shapes, same rules (they can be combined):
+#   1. A pure-Python app (standard library only at runtime) whose `entry_point` can be run with
+#      `python3 <entry_point> <args>`: `install_files` + `entry_point` (a launcher is generated).
+#   2. A system package of scripts and services (for example shell scripts + systemd timers, no GUI):
+#      `install_map` (repo file -> absolute path and mode), `symlinks`, `conffiles`, `scripts_dir`
+#      (maintainer scripts kept in the repo) and `version_plain_file`. No launcher: leave `entry_point`
+#      empty and name an installed command in `command_name` for the smoke test.
+#
+# Call it AFTER the build job so the release already exists. A package-only repo (no desktop build)
+# calls it straight after the tag job with `generate_release_notes: true`: the release is created if missing.
 #
 #   deb:
 #     needs: release
@@ -37,23 +45,46 @@ on:
         required: true
         type: string
       command_name:
-        description: 'Command installed into /usr/bin that runs the app, e.g. punctual'
+        description: 'Command the smoke test runs with smoke_args. With entry_point set, a launcher with this name is created in /usr/bin; without it, the command must be installed by install_map or symlinks (e.g. netwatch-report)'
         required: true
         type: string
       entry_point:
-        description: 'Python file (one of install_files) the command runs, e.g. punctual.py'
-        required: true
+        description: 'Python file (one of install_files) the generated /usr/bin launcher runs, e.g. punctual.py. Leave empty for a package that installs its own commands'
+        required: false
         type: string
+        default: ''
       install_files:
         description: 'Space-separated files or directories from the repo, installed into /usr/lib/<package_name>/ with their relative paths kept, e.g. "punctual.py"'
-        required: true
+        required: false
         type: string
-      description:
-        description: 'One-line package description'
-        required: true
+        default: ''
+      install_map:
+        description: 'One "<repo path> <absolute install path> [mode]" per line (mode defaults to 0644), e.g. "bin/tool /usr/lib/tool/tool 0755". The repo path is a file in the checkout; the install path must be absolute'
+        required: false
         type: string
+        default: ''
+      symlinks:
+        description: 'One "<link path> <target>" per line, both absolute, e.g. "/usr/bin/tool /usr/lib/tool/tool"'
+        required: false
+        type: string
+        default: ''
+      conffiles:
+        description: 'Absolute paths, one per line, that are conffiles (dpkg keeps the user''s edits on upgrade). Each must also be installed by install_map, e.g. /etc/tool.conf'
+        required: false
+        type: string
+        default: ''
+      scripts_dir:
+        description: 'Directory in the repo holding maintainer scripts named preinst, postinst, prerm and/or postrm, copied into the package control area (mode 0755)'
+        required: false
+        type: string
+        default: ''
       version_file:
         description: 'If set, write __version__ = "X.Y.Z" to this path before packaging (same as release-python-gui.yml, e.g. _version.py) and install it too'
+        required: false
+        type: string
+        default: ''
+      version_plain_file:
+        description: 'If set, write the bare version (1.2.3) to this repo path before packaging; install it with install_map. For non-Python packages, where version_file does not fit'
         required: false
         type: string
         default: ''
@@ -67,6 +98,10 @@ on:
         required: false
         type: string
         default: ''
+      description:
+        description: 'One-line package description'
+        required: true
+        type: string
       maintainer:
         description: 'Debian Maintainer field'
         required: false
@@ -77,6 +112,16 @@ on:
         required: false
         type: string
         default: '--version'
+      release_note:
+        description: 'Text appended to the GitHub Release body under "## Debian / Ubuntu". Empty = the default text for a Python app'
+        required: false
+        type: string
+        default: ''
+      generate_release_notes:
+        description: 'Also let GitHub generate the changelog for the Release body. Set true when this workflow is the one that creates the Release (a package-only repo); leave false when an earlier build job already did'
+        required: false
+        type: boolean
+        default: false
       publish:
         description: 'Attach the .deb to the GitHub Release for the tag. Set false to only build and test it (the .deb is still uploaded as a workflow artifact)'
         required: false
@@ -95,8 +140,13 @@ jobs:
       COMMAND_NAME: ${{ inputs.command_name }}
       ENTRY_POINT: ${{ inputs.entry_point }}
       INSTALL_FILES: ${{ inputs.install_files }}
+      INSTALL_MAP: ${{ inputs.install_map }}
+      SYMLINKS: ${{ inputs.symlinks }}
+      CONFFILES: ${{ inputs.conffiles }}
+      SCRIPTS_DIR: ${{ inputs.scripts_dir }}
       DESCRIPTION: ${{ inputs.description }}
       VERSION_FILE: ${{ inputs.version_file }}
+      VERSION_PLAIN_FILE: ${{ inputs.version_plain_file }}
       DEPENDS: ${{ inputs.depends }}
       RECOMMENDS: ${{ inputs.recommends }}
       MAINTAINER: ${{ inputs.maintainer }}
@@ -111,11 +161,17 @@ jobs:
           [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version must look like 1.2.3 or v1.2.3, got '$VERSION'" >&2; exit 1; }
           [[ "$PACKAGE_NAME" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "invalid package_name '$PACKAGE_NAME'" >&2; exit 1; }
           [[ "$COMMAND_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "invalid command_name '$COMMAND_NAME'" >&2; exit 1; }
+          [ -n "$INSTALL_FILES" ] || [ -n "$INSTALL_MAP" ] || { echo "nothing to package: set install_files and/or install_map" >&2; exit 1; }
+          [ -z "$ENTRY_POINT" ] || [ -n "$INSTALL_FILES" ] || { echo "entry_point needs install_files" >&2; exit 1; }
           echo "VER=$VER" >> "$GITHUB_ENV"
 
       - name: Write version file
         if: inputs.version_file != ''
         run: echo "__version__ = \"${VER}\"" > "$VERSION_FILE"
+
+      - name: Write plain version file
+        if: inputs.version_plain_file != ''
+        run: echo "${VER}" > "$VERSION_PLAIN_FILE"
 
       - name: Assemble package tree
         run: |
@@ -123,26 +179,64 @@ jobs:
           ROOT="build/deb/${PACKAGE_NAME}_${VER}_all"
           LIB="$ROOT/usr/lib/$PACKAGE_NAME"
           DOC="$ROOT/usr/share/doc/$PACKAGE_NAME"
-          mkdir -p "$LIB" "$DOC" "$ROOT/usr/bin" "$ROOT/DEBIAN"
+          mkdir -p "$DOC" "$ROOT/DEBIAN"
 
-          # The app's own source files, straight from this checkout: the single source of truth.
-          FILES="$INSTALL_FILES"
-          [ -z "$VERSION_FILE" ] || FILES="$FILES $VERSION_FILE"
-          for f in $FILES; do
-            [ -e "$f" ] || { echo "install_files entry not found in the repo: $f" >&2; exit 1; }
-            mkdir -p "$LIB/$(dirname "$f")"
-            cp -a "$f" "$LIB/$f"
-          done
-          [ -f "$LIB/$ENTRY_POINT" ] || { echo "entry_point '$ENTRY_POINT' is not one of install_files" >&2; exit 1; }
-          find "$LIB" -name '__pycache__' -prune -exec rm -rf {} +
+          # Python shape: the app's own source files, straight from this checkout.
+          if [ -n "$INSTALL_FILES$VERSION_FILE" ]; then
+            mkdir -p "$LIB" "$ROOT/usr/bin"
+            FILES="$INSTALL_FILES"
+            [ -z "$VERSION_FILE" ] || FILES="$FILES $VERSION_FILE"
+            for f in $FILES; do
+              [ -e "$f" ] || { echo "install_files entry not found in the repo: $f" >&2; exit 1; }
+              mkdir -p "$LIB/$(dirname "$f")"
+              cp -a "$f" "$LIB/$f"
+            done
+            find "$LIB" -name '__pycache__' -prune -exec rm -rf {} +
+            find "$LIB" -type f -exec chmod 0644 {} +
+          fi
+          if [ -n "$ENTRY_POINT" ]; then
+            [ -f "$LIB/$ENTRY_POINT" ] || { echo "entry_point '$ENTRY_POINT' is not one of install_files" >&2; exit 1; }
+            printf '#!/bin/sh\nexec python3 /usr/lib/%s/%s "$@"\n' "$PACKAGE_NAME" "$ENTRY_POINT" > "$ROOT/usr/bin/$COMMAND_NAME"
+            chmod 0755 "$ROOT/usr/bin/$COMMAND_NAME"
+          fi
 
-          printf '#!/bin/sh\nexec python3 /usr/lib/%s/%s "$@"\n' "$PACKAGE_NAME" "$ENTRY_POINT" > "$ROOT/usr/bin/$COMMAND_NAME"
-          chmod 0755 "$ROOT/usr/bin/$COMMAND_NAME"
+          # System-package shape: repo file -> absolute path and mode.
+          abs_ok() { case "$1" in /*) ;; *) return 1 ;; esac; case "/$1/" in */../*) return 1 ;; esac; }
+          while read -r src dest mode _rest; do
+            case "${src:-}" in ''|'#'*) continue ;; esac
+            mode="${mode:-0644}"
+            [[ "$mode" =~ ^[0-7]{3,4}$ ]] || { echo "install_map: bad mode '$mode' for $src" >&2; exit 1; }
+            [ -f "$src" ] || { echo "install_map: file not found in the repo: $src" >&2; exit 1; }
+            abs_ok "${dest:-}" || { echo "install_map: install path must be absolute and free of '..': '${dest:-}'" >&2; exit 1; }
+            install -D -m "$mode" "$src" "$ROOT$dest"
+          done <<< "$INSTALL_MAP"
+          while read -r link target _rest; do
+            case "${link:-}" in ''|'#'*) continue ;; esac
+            { abs_ok "$link" && abs_ok "${target:-}"; } || { echo "symlinks: both paths must be absolute and free of '..': '$link' '${target:-}'" >&2; exit 1; }
+            mkdir -p "$ROOT$(dirname "$link")"
+            ln -s "$target" "$ROOT$link"
+          done <<< "$SYMLINKS"
+
+          # Conffiles: listed in DEBIAN/conffiles, and they must really be in the package.
+          while read -r c; do
+            case "${c:-}" in ''|'#'*) continue ;; esac
+            abs_ok "$c" || { echo "conffiles: path must be absolute: '$c'" >&2; exit 1; }
+            [ -f "$ROOT$c" ] || { echo "conffiles: $c is not installed by install_map" >&2; exit 1; }
+            echo "$c" >> "$ROOT/DEBIAN/conffiles"
+          done <<< "$CONFFILES"
+
+          # Maintainer scripts live in the repo (package glue, not a copy of the app's code).
+          if [ -n "$SCRIPTS_DIR" ]; then
+            [ -d "$SCRIPTS_DIR" ] || { echo "scripts_dir not found in the repo: $SCRIPTS_DIR" >&2; exit 1; }
+            for s in preinst postinst prerm postrm; do
+              [ ! -f "$SCRIPTS_DIR/$s" ] || install -m 0755 "$SCRIPTS_DIR/$s" "$ROOT/DEBIAN/$s"
+            done
+          fi
 
           [ ! -f LICENSE ] || cp LICENSE "$DOC/copyright"
           [ ! -f README.md ] || cp README.md "$DOC/README.md"
           find "$ROOT" -type d -exec chmod 0755 {} +
-          find "$LIB" "$DOC" -type f -exec chmod 0644 {} +
+          find "$DOC" -type f -exec chmod 0644 {} +
 
           {
             echo "Package: $PACKAGE_NAME"
@@ -163,11 +257,18 @@ jobs:
 
       - name: Show what was built
         run: |
+          set -euo pipefail
           dpkg-deb --info "$DEB"
           dpkg-deb --contents "$DEB"
+          # Maintainer scripts must at least parse.
+          T="$(mktemp -d)"
+          dpkg-deb --control "$DEB" "$T"
+          for f in preinst postinst prerm postrm; do
+            [ ! -f "$T/$f" ] || sh -n "$T/$f"
+          done
 
       # Drift guard: install the package like a user would and make sure it is the tag's version.
-      - name: Smoke test (install, run, remove)
+      - name: Smoke test (install, run, remove, purge)
         run: |
           set -euo pipefail
           sudo apt-get install -y "./$DEB"
@@ -179,6 +280,8 @@ jobs:
           esac
           sudo apt-get remove -y "$PACKAGE_NAME"
           if command -v "$COMMAND_NAME" >/dev/null; then echo "$COMMAND_NAME is still installed after removing the package" >&2; exit 1; fi
+          # Purge too, so the postrm purge path has run once before a release ships.
+          sudo apt-get purge -y "$PACKAGE_NAME"
 
       - uses: actions/upload-artifact@v4
         with:
@@ -192,10 +295,11 @@ jobs:
           tag_name: ${{ inputs.version }}
           files: ${{ env.DEB }}
           append_body: true
+          generate_release_notes: ${{ inputs.generate_release_notes }}
           body: |
 
             ## Debian / Ubuntu
 
             Download `${{ env.PACKAGE_NAME }}_${{ env.VER }}_all.deb`, then install (or upgrade) it with
-            `sudo apt install ./${{ env.PACKAGE_NAME }}_${{ env.VER }}_all.deb`. It uses the system `python3` and installs the
-            `${{ env.COMMAND_NAME }}` command. Remove it with `sudo apt remove ${{ env.PACKAGE_NAME }}`; your settings are kept.
+            `sudo apt install ./${{ env.PACKAGE_NAME }}_${{ env.VER }}_all.deb`.
+            ${{ inputs.release_note != '' && inputs.release_note || format('It uses the system `python3` and installs the `{0}` command. Remove it with `sudo apt remove {1}`; your settings are kept.', env.COMMAND_NAME, env.PACKAGE_NAME) }}

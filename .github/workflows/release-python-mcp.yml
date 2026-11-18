@@ -95,7 +95,10 @@ jobs:
           tag_name: ${{ inputs.version }}
           name: ${{ inputs.package_name }} ${{ inputs.version }}
           generate_release_notes: true
-          files: ${{ inputs.project_dir }}/dist/*
+          # Not dist/*: `uv build` also writes a .gitignore into dist/.
+          files: |
+            ${{ inputs.project_dir }}/dist/*.whl
+            ${{ inputs.project_dir }}/dist/*.tar.gz
           body: |
             ## Installing
 

@@ -1,0 +1,57 @@
+name: CI (Python / uv)
+
+# Reusable CI gate for uv-managed Python projects with no GUI and no
+# PyInstaller build: MCP servers, CLIs, libraries. New variant (first
+# consumer: ColorBookForge). See python-mcp-servers.md.
+#
+# Installs from the lockfile (`--locked`, so a stale uv.lock fails the run),
+# lints with ruff, then runs pytest. Both ruff and pytest are expected in the
+# project's `dev` dependency group.
+
+on:
+  workflow_call:
+    inputs:
+      project_dir:
+        description: 'Directory holding pyproject.toml, relative to the repo root'
+        required: false
+        type: string
+        default: '.'
+      python_version:
+        required: false
+        type: string
+        default: '3.11'
+      os:
+        description: 'Runner label. Use windows-latest for a project that must also work there.'
+        required: false
+        type: string
+        default: 'ubuntu-latest'
+      run_lint:
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ${{ inputs.os }}
+    defaults:
+      run:
+        working-directory: ${{ inputs.project_dir }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: ${{ inputs.python_version }}
+
+      - name: Install dependencies from the lockfile
+        run: uv sync --locked --all-groups
+
+      - name: Lint
+        if: ${{ inputs.run_lint }}
+        run: uv run ruff check .
+
+      - name: Test
+        run: uv run pytest

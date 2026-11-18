@@ -186,6 +186,8 @@ evaluation results are in `REPO_SCOPE.md`.
 | `ci-go.yml` | Go build+vet gate (library, web app or generator); optional `run_tests: true` also runs `go test ./...` | gameshell-framework, card-judge, timeline-trivia, directory-engine |
 | `release-claude-plugin.yml` | Claude Code plugins and mods (no build artifact; validate, test, release with install commands) | Shipwatch |
 | `ci-claude-plugin.yml` | Claude Code plugin validate+test gate | Shipwatch |
+| `release-python-mcp.yml` | uv Python packages with no GUI (MCP servers, CLIs): lint, test, `uv build`, wheel+sdist release; see [`python-mcp-servers.md`](python-mcp-servers.md) | ColorBookForge |
+| `ci-python.yml` | uv Python lint (ruff) + pytest gate | ColorBookForge |
 
 Claude Code plugins and mods have their own category: see [`claude-plugins.md`](claude-plugins.md).
 

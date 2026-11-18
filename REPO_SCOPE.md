@@ -19,6 +19,8 @@ not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Static sites** (the `directory-engine` generator and the niche repos built with it) are another separate category with their own standard, [`static-sites.md`](static-sites.md). Tracked here: [directory-engine](https://github.com/gerp93/directory-engine) (engine; see its section at the end).
 
+**Python MCP servers / headless uv packages** are another separate category with their own standard, [`python-mcp-servers.md`](python-mcp-servers.md) (no GUI, so theming, logo, update-check and installer are N/A). Tracked here: [ColorBookForge](https://github.com/gerp93/ColorBookForge) (MCP server for KDP coloring-book interiors; added 2026-11-18, first consumer of `release-python-mcp.yml` and `ci-python.yml`).
+
 **Tooling note (2026-08-17):** the scheduled audit that maintains this file
 checks each repo's "Automatically delete head branches" setting as part of
 its sweep, but has no GitHub tool available to it that reads or writes

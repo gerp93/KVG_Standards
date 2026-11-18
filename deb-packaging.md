@@ -1,10 +1,11 @@
 # Debian package (.deb)
 
-A Python app that is also meant to run on a Debian/Ubuntu machine (a server, a Raspberry Pi) ships a
-`.deb` next to its other release builds, so the install is `sudo apt install ./app_1.2.3_all.deb`
-instead of cloning a repo or copying a file by hand. The workflow is
-[`.github/workflows/release-deb.yml`](.github/workflows/release-deb.yml). First user:
-[SoSmartButNeverPunctual](https://github.com/gerp93/SoSmartButNeverPunctual).
+A Python app that is also meant to run on a Debian/Ubuntu machine (a server, a Raspberry Pi), or a headless
+tool made of scripts and systemd units, ships a `.deb` next to its other release builds, so the install is
+`sudo apt install ./app_1.2.3_all.deb` instead of cloning a repo or copying a file by hand. The workflow is
+[`.github/workflows/release-deb.yml`](.github/workflows/release-deb.yml). First users:
+[SoSmartButNeverPunctual](https://github.com/gerp93/SoSmartButNeverPunctual) (the Python shape) and
+[Netwatch](https://github.com/gerp93/Netwatch) (the system-package shape).
 
 ## The rule: one source, no drift
 
@@ -34,9 +35,45 @@ The `.deb` must never become a second copy of the app that can fall behind the d
   the user's home, so installing, upgrading or removing the package never touches them.
 - Upgrade: `sudo apt install ./newer.deb`. Remove: `sudo apt remove <package_name>`.
 
+## The system-package shape (scripts + systemd units)
+
+A tool that is not one Python entry point, but shell scripts, systemd units, a settings file in `/etc` and a
+system user (Netwatch), uses the same workflow with these optional inputs instead of `install_files` /
+`entry_point`:
+
+- `install_map`: one `<repo path> <absolute install path> [mode]` per line. The repo path is a file that already
+  lives in the repo (the repo's own layout, e.g. `bin/` and `systemd/`, is kept; nothing is copied into a
+  `debian/` folder). Follow the Filesystem Hierarchy: code in `/usr/lib/<name>/`, commands in `/usr/bin`,
+  units in `/usr/lib/systemd/system/`, nothing in `/usr/local`.
+- `symlinks`: `<link> <target>` lines (a command in `/usr/bin` pointing into `/usr/lib/<name>/`).
+- `conffiles`: absolute paths (each also in `install_map`) that dpkg keeps on upgrade. Keep the packaged default
+  of a conffile unchanged between releases: if both the package's default and the user's copy changed, dpkg
+  asks, and an unattended `apt install` with no terminal fails unless it passes
+  `-o Dpkg::Options::=--force-confold`.
+- `scripts_dir`: a repo folder holding `preinst`, `postinst`, `prerm`, `postrm` (package glue: creating the system
+  user, enabling timers, taking over an older non-package install, purge). They hold no application code.
+  They must be re-runnable, must not fail when systemd is not running (`[ -d /run/systemd/system ]`), and must
+  keep user data on `remove` and delete it only on `purge`.
+- `version_plain_file`: writes the bare version to a repo path (installed through `install_map`), which the
+  installed command prints for `--version`. `command_name` is then an installed command, not a generated launcher.
+- `depends`, `release_note`, `generate_release_notes: true` for a package-only repo (no desktop build; the
+  workflow creates the Release, so call it right after the tag job).
+
+The smoke test additionally purges the package after removing it, and the control scripts are syntax-checked.
+Keep the inputs identical in the repo's `auto-release.yml`, `cut-release.yml` and its CI (a `ci.yml` that calls this
+workflow with `publish: false` builds the very same package on every pull request, which is how Netwatch also
+tests install, upgrade, remove and purge on the runner).
+
+**Taking over an older install.** If the app used to install from a clone, write the `preinst` so the package
+removes what the old installer created (and only that), and set a settings file that no package owns aside and
+put it back in `postinst`: otherwise dpkg stops to ask about it, or fails with no terminal. Test it by running the
+real old installer on a throwaway machine and then installing the `.deb` over it (Netwatch's
+`tests/test-package.sh` does this).
+
 ## Scope
 
-For apps whose runtime is **standard-library-only Python** (a script, or a script plus a Tkinter window).
+For apps whose runtime is **standard-library-only Python** (a script, or a script plus a Tkinter window), and for
+scripts-and-systemd tools whose dependencies are all Debian packages (`depends`).
 An app with pip dependencies needs a different design (vendoring or a venv-based package); do not stretch
 this workflow to cover it, bring it back here first. A GUI that needs a toolkit can list it under
 `recommends` (for example `python3-tk`); there is no separate GUI package yet.

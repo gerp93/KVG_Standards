@@ -28,6 +28,14 @@ on:
         required: false
         type: string
         default: '20'
+      test_command:
+        description: >-
+          Shell command that runs the plugin's tests, e.g. 'npm test'. Runs in plugin_dir with all dependencies
+          installed (dev dependencies included), before the production-only install that gets packaged, so a failing
+          test stops the release before anything is published. Leave empty to skip.
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -41,6 +49,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ inputs.node_version }}
+
+      # The packaged plugin must carry production dependencies only, but test tools are dev dependencies.
+      # So when tests are requested: install everything, test, and let the production install below replace
+      # node_modules (`npm ci` deletes it first), which leaves exactly what a no-tests build would have packaged.
+      - name: Test
+        if: ${{ inputs.test_command != '' }}
+        working-directory: ${{ inputs.plugin_dir }}
+        shell: bash
+        env:
+          TEST_COMMAND: ${{ inputs.test_command }}
+        run: |
+          npm ci
+          eval "$TEST_COMMAND"
 
       - name: Install production dependencies into the plugin folder
         working-directory: ${{ inputs.plugin_dir }}

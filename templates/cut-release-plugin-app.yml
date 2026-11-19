@@ -71,5 +71,6 @@ jobs:
       version: ${{ needs.tag.outputs.version }}
       app_dir: app
       skip_release_notes: true # the plugin job wrote the release text
+      # test_command: npm test # the app's tests, run before the installers are built (opt-in)
     permissions:
       contents: write

@@ -60,5 +60,8 @@ jobs:
       # ...this build variant's other required inputs, e.g.:
       # app_name: MyApp
       # entry_point: gui.py
+      # Run the repo's tests before anything is built or published (opt-in; empty skips them).
+      # Most variants take test_command (a shell command, e.g. npm test); Avalonia takes test_path.
+      # test_command: npm test
     permissions:
       contents: write

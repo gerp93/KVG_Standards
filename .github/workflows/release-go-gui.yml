@@ -54,6 +54,14 @@ on:
         required: false
         type: string
         default: ''
+      test_command:
+        description: >-
+          Shell command that runs the tests, e.g. 'go vet ./... && go test ./...'. Runs in gui_dir on every
+          OS, after Go, Node, the Wails CLI and the Linux GTK/WebKit packages are installed and before 'wails build',
+          so a failing test stops the release before anything is published. Leave empty to skip.
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -96,6 +104,14 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Test
+        if: ${{ inputs.test_command != '' }}
+        working-directory: ${{ inputs.gui_dir }}
+        shell: bash
+        env:
+          TEST_COMMAND: ${{ inputs.test_command }}
+        run: eval "$TEST_COMMAND"
 
       - name: Build GUI
         working-directory: ${{ inputs.gui_dir }}

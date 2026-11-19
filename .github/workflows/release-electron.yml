@@ -35,6 +35,15 @@ on:
         required: false
         type: boolean
         default: false
+      test_command:
+        description: >-
+          Shell command that runs the app's tests, e.g. 'npm test'. Runs in app_dir on every OS, after
+          'npm ci --ignore-scripts' and before the build, so a failing test stops the release before anything is
+          published. Native modules are not rebuilt at that point, so tests must not need a compiled addon.
+          Leave empty to skip.
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -75,6 +84,13 @@ jobs:
           npm ci --ignore-scripts
           node node_modules/electron/install.js
           node node_modules/esbuild/install.js
+
+      - name: Test
+        if: ${{ inputs.test_command != '' }}
+        shell: bash
+        env:
+          TEST_COMMAND: ${{ inputs.test_command }}
+        run: eval "$TEST_COMMAND"
 
       - name: Build renderer + main
         run: npm run build

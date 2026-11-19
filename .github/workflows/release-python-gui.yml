@@ -43,6 +43,14 @@ on:
         required: false
         type: string
         default: ''
+      test_command:
+        description: >-
+          Shell command that runs the app's tests, e.g. 'python -m unittest discover -s tests -v'. Runs on
+          every OS from the repo root, after dependencies are installed and the version file is written and before
+          PyInstaller runs, so a failing test stops the release before anything is published. Leave empty to skip.
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -89,6 +97,13 @@ jobs:
         if: inputs.version_file != ''
         shell: bash
         run: echo "__version__ = \"${{ inputs.version }}\"" | sed 's/^v//' > "${{ inputs.version_file }}"
+
+      - name: Test
+        if: ${{ inputs.test_command != '' }}
+        shell: bash
+        env:
+          TEST_COMMAND: ${{ inputs.test_command }}
+        run: eval "$TEST_COMMAND"
 
       - name: Build executable
         shell: bash

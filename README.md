@@ -119,6 +119,12 @@ directly as the reference pattern. Avalonia/.NET apps vendor
 current database file size, formatted in whichever unit (KB/MB/GB) fits
 its size — see `db-location-versioning.md`.
 
+## Secrets
+
+Secrets never go in the repo or its history; tracked config holds only their names. Keys a user
+enters in an app are stored encrypted with the OS secret store, in a file of their own and never in
+the relocatable SQLite database, and are write-only in the UI. See [`secrets.md`](secrets.md).
+
 ## Electron application menu
 
 Electron apps replace the noisy default menu bar (File/Edit/View/Window/Help,
@@ -174,15 +180,15 @@ evaluation results are in `REPO_SCOPE.md`.
 
 | Workflow | For | Used by |
 |---|---|---|
-| `release-python-gui.yml` | PyInstaller-packaged Python GUI apps | KVGrainy, KVGroove, kvg_converter |
+| `release-python-gui.yml` | PyInstaller-packaged Python GUI apps; optional `test_command` | KVGrainy, KVGroove, kvg_converter |
 | `release-deb.yml` | A `.deb` for a standard-library-only Python app, or for a scripts-and-systemd package (file map, conffiles, maintainer scripts), built from the same files, commit and tag as its other release builds (add after the build job, or straight after the tag job in a package-only repo); see [`deb-packaging.md`](deb-packaging.md) | SoSmartButNeverPunctual, Netwatch |
-| `release-go-gui.yml` | Wails (Go) desktop apps | gameshell-deploy (gui/) |
-| `release-electron.yml` | Electron desktop apps; `app_dir` for an app in a subfolder, `skip_release_notes` when sharing a release with a plugin | sweeper, Shipwatch (app/) |
-| `release-flet.yml` | Flet desktop apps | kvgenius |
-| `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler) | kvgauge |
-| `release-avalonia.yml` | Avalonia (.NET) desktop apps, packaged with Velopack: Windows `Setup.exe`, Linux AppImage | KVGuzzler |
+| `release-go-gui.yml` | Wails (Go) desktop apps; optional `test_command` | gameshell-deploy (gui/) |
+| `release-electron.yml` | Electron desktop apps; `app_dir` for an app in a subfolder, `skip_release_notes` when sharing a release with a plugin, optional `test_command` | sweeper, Shipwatch (app/) |
+| `release-flet.yml` | Flet desktop apps; optional `test_command` | kvgenius |
+| `release-streamdeck.yml` | Elgato Stream Deck plugins (plain Node.js, no compiler); optional `test_command` | kvgauge |
+| `release-avalonia.yml` | Avalonia (.NET) desktop apps, packaged with Velopack: Windows `Setup.exe`, Linux AppImage; optional `test_path` | KVGuzzler |
 | `ci-dotnet.yml` | .NET build gate (`-warnaserror`); optional `run_tests: true` | KVGuzzler |
-| `release-godot.yml` | Godot desktop games (GDScript only, no C#/.NET) | airport |
+| `release-godot.yml` | Godot desktop games (GDScript only, no C#/.NET); optional `test_command` | airport |
 | `ci-go.yml` | Go build+vet gate (library, web app or generator); optional `run_tests: true` also runs `go test ./...` | gameshell-framework, card-judge, timeline-trivia, directory-engine |
 | `release-claude-plugin.yml` | Claude Code plugins and mods (no build artifact; validate, test, release with install commands) | Shipwatch |
 | `ci-claude-plugin.yml` | Claude Code plugin validate+test gate | Shipwatch |
@@ -218,6 +224,23 @@ A Claude Code plugin that also ships a companion Electron app from `app/` uses
 `templates/auto-release-plugin-app.yml` and `templates/cut-release-plugin-app.yml`
 instead: the plugin job always runs, the app job only when the app or its shared code
 changed, both under one tag and one release. See `claude-plugins.md`.
+
+## Tests run at release
+
+**A repo that has automated tests must pass `test_command` (or `test_path` for Avalonia) to its release
+workflow**, so a release never ships from a commit whose tests fail. The step runs on every OS in the
+build matrix, before anything is built or published. It is opt-in with an empty default: the workflows are
+called at `@main` by many repos, and a default-on step would break every caller that has no tests.
+A repo with no tests yet says so in its `TODO.md`.
+
+```yaml
+    with:
+      version: ${{ needs.version.outputs.new_tag }}
+      test_command: npm test
+```
+
+`release-python-mcp.yml` and `release-claude-plugin.yml` always run their tests. `ci-go.yml` and
+`ci-dotnet.yml` take `run_tests: true` for the PR gate; that is separate from the release step.
 
 ## Adding a new consumer repo
 

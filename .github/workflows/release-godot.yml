@@ -36,6 +36,16 @@ on:
         required: false
         type: string
         default: ''
+      test_command:
+        description: >-
+          Shell command that runs the project's checks with the Godot editor already on PATH as 'godot', e.g.
+          'godot --headless --import && godot --headless --path . res://ToolSweep.tscn 2>&1 | tee check.log; ! grep -E "SCRIPT ERROR|FAILED" check.log'.
+          Godot exits 0 even on script errors, so the command must fail by itself (grep the output, as above).
+          Runs in project_dir on every OS, after Godot is installed and before the export, so a failing check stops
+          the release before anything is published. A fresh checkout has no import cache, so import first. Leave empty to skip.
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -87,6 +97,14 @@ jobs:
           version: ${{ inputs.godot_version }}
           use-dotnet: false
           include-templates: true
+
+      - name: Test
+        if: ${{ inputs.test_command != '' }}
+        shell: bash
+        working-directory: ${{ inputs.project_dir }}
+        env:
+          TEST_COMMAND: ${{ inputs.test_command }}
+        run: eval "$TEST_COMMAND"
 
       - name: Export build
         shell: bash

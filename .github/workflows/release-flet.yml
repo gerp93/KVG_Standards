@@ -27,6 +27,14 @@ on:
         required: false
         type: string
         default: ''
+      test_command:
+        description: >-
+          Shell command that runs the app's tests, e.g. 'python -m unittest discover -s tests -v'. Runs on
+          every OS from the repo root, after dependencies are installed and before 'flet build', so a failing test
+          stops the release before anything is published. Leave empty to skip.
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: write
@@ -67,6 +75,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libgtk-3-dev ninja-build
+
+      - name: Test
+        if: ${{ inputs.test_command != '' }}
+        shell: bash
+        env:
+          TEST_COMMAND: ${{ inputs.test_command }}
+        run: eval "$TEST_COMMAND"
 
       - name: Build with Flet
         shell: bash

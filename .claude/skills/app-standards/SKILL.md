@@ -1,6 +1,6 @@
 ---
 name: app-standards
-description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), Claude Code plugins/mods (version-less, marketplace-installed, validate+test CI), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), Electron application menu (minimal View+Help, no File/Edit/Window), Avalonia/.NET desktop apps (Velopack release+update, vendored VisualAssault theme and KvgDbLocation), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
+description: gerp93 app-repo conventions — theming (VisualAssault, pinned by tag), release/CI pipelines (KVG_Standards reusable workflows), Claude Code plugins/mods (version-less, marketplace-installed, validate+test CI), self-update (kvg_updater/kvgupdate, pinned by tag), licensing (AGPL-3.0 by default), SQLite database location (kvg_dblocation, pinned by tag), secrets (never committed, OS-encrypted for user-entered keys), tests run at release (`test_command`), Electron application menu (minimal View+Help, no File/Edit/Window), Avalonia/.NET desktop apps (Velopack release+update, vendored VisualAssault theme and KvgDbLocation), logo & branding, release notes, VERSION_BUMP.md, per-repo TODO.md, 1.0 readiness (pass/fail gates, PRE-1.0/READY-FOR-1.0/OK-1.0/PREMATURE-1.0 verdicts), and docs linking back to KVG_Standards. Use when scaffolding a new gerp93 app repo, or auditing/retrofitting an existing one for compliance with these standards.
 ---
 
 # App standards
@@ -9,7 +9,7 @@ Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards)
 This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
 `update-check-versioning.md` / `licensing.md` / `db-location-versioning.md`
-/ `electron-menu.md` / `game-repos.md` / `.github/workflows/` over anything
+/ `electron-menu.md` / `secrets.md` / `game-repos.md` / `.github/workflows/` over anything
 cached here.
 
 ## Docs must point back here
@@ -201,6 +201,12 @@ gives a real, reviewable diff instead of an empty commit — see KVGrainy's
   it belongs in `KVG_Standards` instead.
 - A repo with `auto-release.yml` but no `VERSION_BUMP.md`, or empty
   `git commit --allow-empty` commits used to force a release instead of it.
+- A repo that has automated tests but whose `auto-release.yml`/`cut-release.yml` don't pass `test_command`
+  (or `test_path` for Avalonia) to the release workflow, so a release can ship from a commit whose tests
+  fail. `test_command` is an opt-in input on `release-electron.yml`, `release-python-gui.yml`,
+  `release-go-gui.yml`, `release-flet.yml`, `release-godot.yml` and `release-streamdeck.yml`; the other
+  release workflows already test. **Not a violation:** a repo with no tests, if its `TODO.md` says so.
+  See README's "Tests run at release".
 
 ## Claude Code plugins and mods
 
@@ -491,6 +497,31 @@ this).
   existing app that hasn't picked it up yet is known drift, not urgent, but
   worth noting rather than silently skipping.
 
+## Secrets
+
+Source of truth: [`secrets.md`](https://github.com/gerp93/KVG_Standards/blob/main/secrets.md).
+
+- Secrets are never in a tracked file, template, fixture, README example or git history; tracked config
+  holds only names (gameshell-deploy's `EXTRA_ENV_VARS`). `.gitignore` covers `.env`, `.env.*`
+  (with `!.env.example`), `*.pem`, `*.key` and `secrets.json`.
+- CI secrets are GitHub Actions secrets only, passed by name, never echoed.
+- A key the user enters in an app is encrypted with the OS secret store (Electron `safeStorage`), in a
+  file of its own under the per-user config location, **not** in the relocatable SQLite database, and it
+  fails closed: no real encryption (on Linux, `basic_text`), no save. Reference: Sweeper's
+  `src/main/simplefin/store.ts`.
+- In the app: write-only in the UI, never logged or put in an error text or export, decrypted only right
+  before use, deleted when the connection is removed.
+- Headless tools: a `0600` file outside the repo and any synced data, written atomically, or environment
+  variables.
+- Non-Electron stacks have no shared helper yet. **Don't invent one in the app repo**: that is the "New
+  tech stacks" case above.
+- **Violation to flag:** a committed secret (rotate it, don't just delete it), a key in the app's SQLite
+  database or in a plain-text settings file, a save that falls back to plain text, a key shown back in the
+  UI or written to a log, a `.gitignore` without the lines above.
+- **Known gaps (2026-11-19):** KVGuzzler keeps its OpenEI key in the settings database and its carbon key in
+  plain-text `carbon.json`; TrackDraft and playtime-roi lack the Linux `basic_text` check; Sweeper's and
+  TrackDraft's `.gitignore` omit `.env`/key files. See `secrets.md`.
+
 ## Per-repo TODO.md
 
 Every active app repo gets a `TODO.md` at its root (copy
@@ -572,7 +603,8 @@ When asked to check a repo against these standards:
    `release-flet.yml`), licensing, application menu (if it's Electron),
    logo & branding, release notes, `VERSION_BUMP.md`, database location
    (if it stores data in SQLite), the Avalonia/.NET section (if it's an
-   Avalonia app), `TODO.md`, and (if it's an in-scope
+   Avalonia app), secrets (all repos), tests passed to the release workflow
+   (if it has tests), `TODO.md`, and (if it's an in-scope
    versioned app) 1.0 readiness against the checklists above. For a Claude
    Code plugin/mod, use the plugin section above instead of the app items.
 3. List every deviation found — don't silently fix anything in an audit-only

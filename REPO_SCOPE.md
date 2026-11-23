@@ -19,6 +19,8 @@ not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Debian-package tools** (headless scripts + systemd timers, shipped as a `.deb`, no GUI) are another separate category, covered by [`deb-packaging.md`](deb-packaging.md) (theming, logo, update-check, installer, menu and DB location are N/A). Tracked here: [Netwatch](https://github.com/gerp93/Netwatch) (home-network monitor for the house server; added 2026-11-18, see its section at the end).
 
+**Server infrastructure / config repos** (rebuild kits for a machine: bootstrap scripts, systemd units, Docker Compose, runbooks; no app, nothing versioned or released) have **no KVG_Standards category yet**; they are audited against the all-repo rules only (licensing, secrets, `TODO.md`, docs linking back). Tracked here: [Holocron](https://github.com/gerp93/Holocron) (house-server rebuild kit; added 2026-11-23, see its section at the end).
+
 **Static sites** (the `directory-engine` generator and the niche repos built with it) are another separate category with their own standard, [`static-sites.md`](static-sites.md). Tracked here: [directory-engine](https://github.com/gerp93/directory-engine) (engine; see its section at the end).
 
 **Python MCP servers / headless uv packages** are another separate category with their own standard, [`python-mcp-servers.md`](python-mcp-servers.md) (no GUI, so theming, logo, update-check and installer are N/A). Tracked here: [ColorBookForge](https://github.com/gerp93/ColorBookForge) (MCP server for KDP coloring-book interiors; added 2026-11-18, first consumer of `release-python-mcp.yml` and `ci-python.yml`).
@@ -1176,3 +1178,21 @@ specifically.
   `gh release download` on the PC, `scp`, `apt install` (documented in its README). The shared `.deb` has no long
   description or changelog (`lintian` errors `extended-description-is-empty`, `no-changelog`), same as
   SoSmartButNeverPunctual's. Not yet run on Debian 13 or on the house server (see its `TODO.md`).
+
+## Server infrastructure (no category yet)
+
+### Holocron
+- **Added 2026-11-23** ([gerp93/Holocron](https://github.com/gerp93/Holocron), created 2026-11-17, AGPL-3.0): the rebuild
+  kit for the house server `holocron` (Debian 13): `bootstrap.sh`, systemd units, Samba config, Docker Compose for
+  Immich / shared MariaDB / Uptime Kuma, `scripts/check.sh` drift check, and the `RESTORE.md` runbook. No app, no releases.
+- Category: **none yet**. No KVG_Standards category covers a server infrastructure/config repo (closest is Netwatch's
+  scripts + systemd shape, minus the `.deb`), so it is audited against the all-repo rules only.
+- Applies: AGPL-3.0 `LICENSE`; secrets (the `.env.example` files hold placeholders only, and the real `.env` files are generated on the box
+  with mode 0600; the repo had **no `.gitignore` at all**, and the standard lines are added in
+  [PR #14](https://github.com/gerp93/Holocron/pull/14), draft); `TODO.md`; README states it follows KVG_Standards (also #14);
+  repo-local `ci.yml` (bash -n, ShellCheck, testparm, systemd-analyze verify, heartbeat test, compose config).
+- N/A by design: theming, logo, update-check, installer, application menu, DB location, release notes, `VERSION_BUMP.md`,
+  tests-at-release (no release workflow), 1.0 readiness (not versioned or released).
+- Open question for the owner: whether to standardize a "server infrastructure" category (e.g. a shared
+  ShellCheck/compose-config CI workflow). Possible improvement, not a violation: CI parses only the Uptime Kuma compose
+  file; Immich and MariaDB could be parsed too with `--env-file services/<x>/.env.example`.

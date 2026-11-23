@@ -1196,3 +1196,18 @@ specifically.
 - Open question for the owner: whether to standardize a "server infrastructure" category (e.g. a shared
   ShellCheck/compose-config CI workflow). Possible improvement, not a violation: CI parses only the Uptime Kuma compose
   file; Immich and MariaDB could be parsed too with `--env-file services/<x>/.env.example`.
+
+## Weekly audit — 2026-11-23
+
+Re-audited the repos with default-branch commits since 2026-11-16 (plus newly created Holocron), mainly against this
+week's new rules (`secrets.md` `.gitignore` baseline, `test_command` at release). All PRs are drafts.
+
+- **ColorBookForge** — secrets `.gitignore` lines ([PR #3](https://github.com/gerp93/ColorBookForge/pull/3)). Otherwise compliant; no user-entered keys yet (a future backend key would need the Python `keyring` helper standardized here first).
+- **Holocron** — new; see its section above ([PR #14](https://github.com/gerp93/Holocron/pull/14)).
+- **KVGenius** — `test_command: node node_modules/ffmpeg-static/install.js && npm test` (529 tests; ffmpeg needed because the release installs with `--ignore-scripts`) and secrets `.gitignore` lines ([PR #184](https://github.com/gerp93/KVGenius/pull/184)). The 1.0 table's "No CI workflow found" is stale: `ci.yml` runs typecheck + `npm test`. Owner question: the app-generated loopback API token sits in plain text in `userData/app-config.json` (not 0600); `secrets.md` only covers user-entered keys.
+- **KVGuzzler** — secrets `.gitignore` lines; the known OpenEI/carbon key gap recorded in its `TODO.md` ([PR #198](https://github.com/gerp93/KVGuzzler/pull/198)). Its section here is stale ("Not yet scaffolded"): the repo is fully scaffolded and now also holds `server/` (Go), `web/`, `contract/` and the `shell/` Electron viewer, released by a local `release-viewer.yml` (`viewer-vX.Y.Z`) pending a tag-prefix option in `release-electron.yml`.
+- **Netwatch** — secrets `.gitignore` lines ([PR #4](https://github.com/gerp93/Netwatch/pull/4)). Open: `release-deb.yml` has no `test_command` input, so releases don't run `tests/run.sh` (shared-workflow change, needs owner approval); `/etc/netwatch.conf` is 0644 while `HEARTBEAT_URL` may carry a token (owner: 0640 vs. the README's documented "use a token you can expose").
+- **Sweeper** — secrets `.gitignore` lines and `test_command: npm test` (22 tests) ([PR #70](https://github.com/gerp93/Sweeper/pull/70)). Electron 28 still on deliberate hold.
+- **card-judge** — secrets `.gitignore` lines and a new `TODO.md` ([PR #18](https://github.com/gerp93/card-judge/pull/18)). **`main` is an upstream mirror again** (PR #17, synced to upstream v1.29.3+); the gameshell-framework port lives only on `f-framework-breakout` (PR #12, "DO NOT MERGE"). On `main` the theming/CI cells in the matrix don't hold (upstream palette, no `ci.yml`, upstream `release.yml`/`version_bump.sh`). Owner decision: do the standards apply to `main` or only to the framework branch?
+- **gameshell-deploy** — secrets `.gitignore` lines and `test_command` running `go vet`/`go test` on all packages but the Wails root (its `go:embed` needs a built frontend) ([PR #31](https://github.com/gerp93/gameshell-deploy/pull/31)). New `holocron` deploy target reviewed: names-only, compliant. Default branch is now `main`; references to `migration/control-plane-scripts` here are stale.
+- **"Automatically delete head branches"** — still not checked: this run also had no `gh` access to repo settings (see the tooling note at the top).

@@ -19,6 +19,8 @@ not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Debian-package tools** (headless scripts + systemd timers, shipped as a `.deb`, no GUI) are another separate category, covered by [`deb-packaging.md`](deb-packaging.md) (theming, logo, update-check, installer, menu and DB location are N/A). Tracked here: [Netwatch](https://github.com/gerp93/Netwatch) (home-network monitor for the house server; added 2026-11-18, see its section at the end).
 
+**Server infrastructure / config repos** (rebuild kits for a machine: bootstrap scripts, systemd units, Docker Compose, runbooks; no app, nothing versioned or released) have **no KVG_Standards category yet**; they are audited against the all-repo rules only (licensing, secrets, `TODO.md`, docs linking back). Tracked here: [Holocron](https://github.com/gerp93/Holocron) (house-server rebuild kit; added 2026-11-23, see its section at the end).
+
 **Static sites** (the `directory-engine` generator and the niche repos built with it) are another separate category with their own standard, [`static-sites.md`](static-sites.md). Tracked here: [directory-engine](https://github.com/gerp93/directory-engine) (engine; see its section at the end).
 
 **Python MCP servers / headless uv packages** are another separate category with their own standard, [`python-mcp-servers.md`](python-mcp-servers.md) (no GUI, so theming, logo, update-check and installer are N/A). Tracked here: [ColorBookForge](https://github.com/gerp93/ColorBookForge) (MCP server for KDP coloring-book interiors; added 2026-11-18, first consumer of `release-python-mcp.yml` and `ci-python.yml`).
@@ -1176,3 +1178,36 @@ specifically.
   `gh release download` on the PC, `scp`, `apt install` (documented in its README). The shared `.deb` has no long
   description or changelog (`lintian` errors `extended-description-is-empty`, `no-changelog`), same as
   SoSmartButNeverPunctual's. Not yet run on Debian 13 or on the house server (see its `TODO.md`).
+
+## Server infrastructure (no category yet)
+
+### Holocron
+- **Added 2026-11-23** ([gerp93/Holocron](https://github.com/gerp93/Holocron), created 2026-11-17, AGPL-3.0): the rebuild
+  kit for the house server `holocron` (Debian 13): `bootstrap.sh`, systemd units, Samba config, Docker Compose for
+  Immich / shared MariaDB / Uptime Kuma, `scripts/check.sh` drift check, and the `RESTORE.md` runbook. No app, no releases.
+- Category: **none yet**. No KVG_Standards category covers a server infrastructure/config repo (closest is Netwatch's
+  scripts + systemd shape, minus the `.deb`), so it is audited against the all-repo rules only.
+- Applies: AGPL-3.0 `LICENSE`; secrets (the `.env.example` files hold placeholders only, and the real `.env` files are generated on the box
+  with mode 0600; the repo had **no `.gitignore` at all**, and the standard lines are added in
+  [PR #14](https://github.com/gerp93/Holocron/pull/14), draft); `TODO.md`; README states it follows KVG_Standards (also #14);
+  repo-local `ci.yml` (bash -n, ShellCheck, testparm, systemd-analyze verify, heartbeat test, compose config).
+- N/A by design: theming, logo, update-check, installer, application menu, DB location, release notes, `VERSION_BUMP.md`,
+  tests-at-release (no release workflow), 1.0 readiness (not versioned or released).
+- Open question for the owner: whether to standardize a "server infrastructure" category (e.g. a shared
+  ShellCheck/compose-config CI workflow). Possible improvement, not a violation: CI parses only the Uptime Kuma compose
+  file; Immich and MariaDB could be parsed too with `--env-file services/<x>/.env.example`.
+
+## Weekly audit — 2026-11-23
+
+Re-audited the repos with default-branch commits since 2026-11-16 (plus newly created Holocron), mainly against this
+week's new rules (`secrets.md` `.gitignore` baseline, `test_command` at release). All PRs are drafts.
+
+- **ColorBookForge** — secrets `.gitignore` lines ([PR #3](https://github.com/gerp93/ColorBookForge/pull/3)). Otherwise compliant; no user-entered keys yet (a future backend key would need the Python `keyring` helper standardized here first).
+- **Holocron** — new; see its section above ([PR #14](https://github.com/gerp93/Holocron/pull/14)).
+- **KVGenius** — `test_command: node node_modules/ffmpeg-static/install.js && npm test` (529 tests; ffmpeg needed because the release installs with `--ignore-scripts`) and secrets `.gitignore` lines ([PR #184](https://github.com/gerp93/KVGenius/pull/184)). The 1.0 table's "No CI workflow found" is stale: `ci.yml` runs typecheck + `npm test`. Owner question: the app-generated loopback API token sits in plain text in `userData/app-config.json` (not 0600); `secrets.md` only covers user-entered keys.
+- **KVGuzzler** — secrets `.gitignore` lines; the known OpenEI/carbon key gap recorded in its `TODO.md` ([PR #198](https://github.com/gerp93/KVGuzzler/pull/198)). Its section here is stale ("Not yet scaffolded"): the repo is fully scaffolded and now also holds `server/` (Go), `web/`, `contract/` and the `shell/` Electron viewer, released by a local `release-viewer.yml` (`viewer-vX.Y.Z`) pending a tag-prefix option in `release-electron.yml`.
+- **Netwatch** — secrets `.gitignore` lines ([PR #4](https://github.com/gerp93/Netwatch/pull/4)). Open: `release-deb.yml` has no `test_command` input, so releases don't run `tests/run.sh` (shared-workflow change, needs owner approval); `/etc/netwatch.conf` is 0644 while `HEARTBEAT_URL` may carry a token (owner: 0640 vs. the README's documented "use a token you can expose").
+- **Sweeper** — secrets `.gitignore` lines and `test_command: npm test` (22 tests) ([PR #70](https://github.com/gerp93/Sweeper/pull/70)). Electron 28 still on deliberate hold.
+- **card-judge** — secrets `.gitignore` lines and a new `TODO.md` ([PR #18](https://github.com/gerp93/card-judge/pull/18)). **`main` is an upstream mirror again** (PR #17, synced to upstream v1.29.3+); the gameshell-framework port lives only on `f-framework-breakout` (PR #12, "DO NOT MERGE"). On `main` the theming/CI cells in the matrix don't hold (upstream palette, no `ci.yml`, upstream `release.yml`/`version_bump.sh`). Owner decision: do the standards apply to `main` or only to the framework branch?
+- **gameshell-deploy** — secrets `.gitignore` lines and `test_command` running `go vet`/`go test` on all packages but the Wails root (its `go:embed` needs a built frontend) ([PR #31](https://github.com/gerp93/gameshell-deploy/pull/31)). New `holocron` deploy target reviewed: names-only, compliant. Default branch is now `main`; references to `migration/control-plane-scripts` here are stale.
+- **"Automatically delete head branches"** — still not checked: this run also had no `gh` access to repo settings (see the tooling note at the top).

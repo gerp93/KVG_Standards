@@ -19,6 +19,8 @@ not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Debian-package tools** (headless scripts + systemd timers, shipped as a `.deb`, no GUI) are another separate category, covered by [`deb-packaging.md`](deb-packaging.md) (theming, logo, update-check, installer, menu and DB location are N/A). Tracked here: [Netwatch](https://github.com/gerp93/Netwatch) (home-network monitor for the house server; added 2026-11-18, see its section at the end).
 
+**Node services shipped as a `.deb`** (a headless server as one self-contained program with its own Node runtime, `amd64` package with systemd units, optional Windows `.exe`) are covered by [`node-service-deb.md`](node-service-deb.md) and `release-node-deb.yml` (approved 2026-11-27). FileShuttle's hub/worker server will be the first consumer; not yet wired.
+
 **Static sites** (the `directory-engine` generator and the niche repos built with it) are another separate category with their own standard, [`static-sites.md`](static-sites.md). Tracked here: [directory-engine](https://github.com/gerp93/directory-engine) (engine; see its section at the end).
 
 **Python MCP servers / headless uv packages** are another separate category with their own standard, [`python-mcp-servers.md`](python-mcp-servers.md) (no GUI, so theming, logo, update-check and installer are N/A). Tracked here: [ColorBookForge](https://github.com/gerp93/ColorBookForge) (MCP server for KDP coloring-book interiors; added 2026-11-18, first consumer of `release-python-mcp.yml` and `ci-python.yml`).

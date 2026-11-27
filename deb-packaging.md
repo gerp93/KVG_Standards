@@ -74,6 +74,8 @@ real old installer on a throwaway machine and then installing the `.deb` over it
 
 For apps whose runtime is **standard-library-only Python** (a script, or a script plus a Tkinter window), and for
 scripts-and-systemd tools whose dependencies are all Debian packages (`depends`).
+A Node app: see [`node-service-deb.md`](node-service-deb.md) (one self-contained program with its own Node runtime,
+`release-node-deb.yml`).
 An app with pip dependencies needs a different design (vendoring or a venv-based package); do not stretch
 this workflow to cover it, bring it back here first. A GUI that needs a toolkit can list it under
 `recommends` (for example `python3-tk`); there is no separate GUI package yet.

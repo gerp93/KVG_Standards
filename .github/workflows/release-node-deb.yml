@@ -1,0 +1,515 @@
+name: Release (Node service .deb)
+
+# Reusable workflow: builds a headless Node service into ONE self-contained program (Node's single-executable
+# application, "SEA", with its own Node runtime inside), packs it as an amd64 .deb with systemd units, and
+# attaches it to the SAME GitHub Release as the caller's other release builds, from the SAME commit and tag.
+# Optionally builds the same program as a Windows .exe in a .zip. Design and rules: node-service-deb.md.
+#
+# The package is not a second copy of the app: the app repo's own build script produces the bundle, the version
+# comes from the tag (exported to that build as APP_VERSION), and a smoke test installs the .deb and checks that
+# the installed command reports that tag's version (a stale or mismatched package fails the release).
+#
+# The app repo decides how its server code is bundled. `build_command` must leave ONE CommonJS file at `bundle`
+# with every dependency inlined (Node built-ins such as node:sqlite stay external; native addons cannot be used).
+# This workflow then runs `node --experimental-sea-config`, copies the runner's `node` binary and injects the
+# blob with postject. Maintainer scripts (system user, enabling units, keep data on remove, delete on purge) live
+# in the app repo and come in through `scripts_dir`, exactly as in release-deb.yml's system-package shape.
+#
+# Call it AFTER the build job so the release already exists (or with `generate_release_notes: true` in a repo
+# with no other build job):
+#
+#   node-deb:
+#     needs: release
+#     uses: gerp93/KVG_Standards/.github/workflows/release-node-deb.yml@main
+#     with:
+#       version: ${{ needs.version.outputs.new_tag }}    # cut-release.yml: needs.tag.outputs.version
+#       package_name: fileshuttle-server
+#       command_name: fileshuttle-server
+#       description: FileShuttle hub and worker server
+#       build_command: npm ci && npm run build:server
+#       bundle: dist/server/fileshuttle-server.cjs
+#       install_map: |
+#         dist/web /usr/lib/fileshuttle-server/web
+#         deploy/fileshuttle-server.service /usr/lib/systemd/system/fileshuttle-server.service
+#         deploy/fileshuttle-server.env /etc/fileshuttle-server/server.env 0640
+#       conffiles: /etc/fileshuttle-server/server.env
+#       scripts_dir: deploy/debian
+#     permissions:
+#       contents: write
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3 (the package version is 1.2.3)'
+        required: true
+        type: string
+      package_name:
+        description: 'Debian package name: lowercase letters, digits, "+", "-" and "." only, e.g. fileshuttle-server'
+        required: true
+        type: string
+      command_name:
+        description: 'Name of the program: the SEA binary is installed as /usr/lib/<package_name>/<command_name> (0755) with a /usr/bin/<command_name> symlink, and the smoke test runs it with smoke_args'
+        required: true
+        type: string
+      description:
+        description: 'One-line package description'
+        required: true
+        type: string
+      build_command:
+        description: 'Shell command (bash) run in the repo root that builds the bundle, e.g. "npm ci && npm run build:server". APP_VERSION (the bare version, e.g. 1.2.3) is set in its environment so the build can bake it in'
+        required: true
+        type: string
+      bundle:
+        description: 'Path, relative to the repo root, of the ONE bundled CommonJS file build_command produces, e.g. dist/server/fileshuttle-server.cjs'
+        required: true
+        type: string
+      node_version:
+        description: 'Node major whose runtime is embedded (and used to build). Debian''s own Node is too old for node:sqlite, which is why the runtime is bundled'
+        required: false
+        type: string
+        default: '24'
+      sea_assets:
+        description: 'Optional files embedded in the program through the SEA config "assets" field, one "name=path" per line (path relative to the repo root, a file in the checkout or the build output, read at run time with sea.getAsset). Alternatively install a built folder beside the binary with install_map'
+        required: false
+        type: string
+        default: ''
+      install_map:
+        description: 'One "<path> <absolute install path> [mode]" per line (mode defaults to 0644). The path is in the checkout OR in the build output (the build has already run) and may be a directory, which is copied recursively (mode, if given, applies to its files). The install path must be absolute'
+        required: false
+        type: string
+        default: ''
+      symlinks:
+        description: 'One "<link path> <target>" per line, both absolute. /usr/bin/<command_name> -> /usr/lib/<package_name>/<command_name> is always made first; a line here for the same link replaces it'
+        required: false
+        type: string
+        default: ''
+      conffiles:
+        description: 'Absolute paths, one per line, that are conffiles (dpkg keeps the user''s edits on upgrade). Each must also be installed by install_map, e.g. /etc/fileshuttle-server/server.env'
+        required: false
+        type: string
+        default: ''
+      scripts_dir:
+        description: 'Directory in the repo holding maintainer scripts named preinst, postinst, prerm and/or postrm, copied into the package control area (mode 0755)'
+        required: false
+        type: string
+        default: ''
+      depends:
+        description: 'Debian Depends field. The program bundles its own Node runtime, so the default is only the C libraries the Node binary links to'
+        required: false
+        type: string
+        default: 'libc6 (>= 2.28), libstdc++6'
+      recommends:
+        description: 'Debian Recommends field (optional extras)'
+        required: false
+        type: string
+        default: ''
+      maintainer:
+        description: 'Debian Maintainer field'
+        required: false
+        type: string
+        default: 'gerp93 <gerp93@users.noreply.github.com>'
+      smoke_args:
+        description: 'Arguments for the post-install check; the command must print the package version'
+        required: false
+        type: string
+        default: '--version'
+      release_note:
+        description: 'Text appended to the GitHub Release body under "## Debian / Ubuntu". Empty = the default text'
+        required: false
+        type: string
+        default: ''
+      generate_release_notes:
+        description: 'Also let GitHub generate the changelog for the Release body. Set true only when this workflow is the one that creates the Release; leave false when an earlier build job already did'
+        required: false
+        type: boolean
+        default: false
+      publish:
+        description: 'Attach the .deb (and the Windows .zip) to the GitHub Release for the tag. Set false to only build and test (the files are still uploaded as workflow artifacts), e.g. from an app''s ci.yml on pull requests'
+        required: false
+        type: boolean
+        default: true
+      windows:
+        description: 'Also build the same program as a Windows .exe (windows-latest), zip it with a README and attach it to the same Release'
+        required: false
+        type: boolean
+        default: false
+      windows_exe_name:
+        description: 'File name of the Windows program, e.g. fileshuttle-server.exe. Empty = <command_name>.exe'
+        required: false
+        type: string
+        default: ''
+      windows_files:
+        description: 'Extra files for the Windows zip, one "<path> <relative path in the zip>" per line (the path may be a directory in the checkout or the build output), e.g. "dist/web web"'
+        required: false
+        type: string
+        default: ''
+      windows_readme:
+        description: 'Path in the repo of a text file to ship as README.txt in the Windows zip. Empty = a short generated one'
+        required: false
+        type: string
+        default: ''
+
+permissions:
+  contents: write
+
+env:
+  # Fixed by Node's SEA documentation; postject finds the blob by this string.
+  SEA_SENTINEL: NODE_SEA_FUSE_fce680ab2cc467b6e072b8b5df1996b2
+  POSTJECT_VERSION: 1.0.0-alpha.6
+
+jobs:
+  deb:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      PACKAGE_NAME: ${{ inputs.package_name }}
+      COMMAND_NAME: ${{ inputs.command_name }}
+      DESCRIPTION: ${{ inputs.description }}
+      BUILD_COMMAND: ${{ inputs.build_command }}
+      BUNDLE: ${{ inputs.bundle }}
+      NODE_VERSION: ${{ inputs.node_version }}
+      SEA_ASSETS: ${{ inputs.sea_assets }}
+      INSTALL_MAP: ${{ inputs.install_map }}
+      SYMLINKS: ${{ inputs.symlinks }}
+      CONFFILES: ${{ inputs.conffiles }}
+      SCRIPTS_DIR: ${{ inputs.scripts_dir }}
+      DEPENDS: ${{ inputs.depends }}
+      RECOMMENDS: ${{ inputs.recommends }}
+      MAINTAINER: ${{ inputs.maintainer }}
+      SMOKE_ARGS: ${{ inputs.smoke_args }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          VER="${VERSION#v}"
+          [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version must look like 1.2.3 or v1.2.3, got '$VERSION'" >&2; exit 1; }
+          [[ "$PACKAGE_NAME" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "invalid package_name '$PACKAGE_NAME'" >&2; exit 1; }
+          [[ "$COMMAND_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "invalid command_name '$COMMAND_NAME'" >&2; exit 1; }
+          [[ "$NODE_VERSION" =~ ^[0-9]+$ ]] || { echo "node_version must be a major number like 24, got '$NODE_VERSION'" >&2; exit 1; }
+          [ -n "$BUILD_COMMAND" ] || { echo "build_command is required" >&2; exit 1; }
+          case "$BUNDLE" in ''|/*|*..*) echo "bundle must be a relative path without '..': '$BUNDLE'" >&2; exit 1 ;; esac
+          [ "$(dpkg --print-architecture)" = amd64 ] || { echo "this workflow builds amd64 packages and needs an amd64 runner" >&2; exit 1; }
+          echo "VER=$VER" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Build the bundle
+        env:
+          APP_VERSION: ${{ env.VER }}
+        run: |
+          set -euo pipefail
+          node --version
+          bash -euo pipefail -c "$BUILD_COMMAND"
+          [ -f "$BUNDLE" ] || { echo "build_command did not produce the bundle: $BUNDLE" >&2; exit 1; }
+
+      # The SEA: a blob made from the bundle, injected into a copy of this runner's own node binary.
+      - name: Make the single-executable program
+        run: |
+          set -euo pipefail
+          WORK=release_work/sea
+          mkdir -p "$WORK"
+          BLOB="$WORK/sea-prep.blob"
+          export BLOB SEA_CONFIG="$WORK/sea-config.json"
+          node -e '
+            const fs = require("fs");
+            const cfg = { main: process.env.BUNDLE, output: process.env.BLOB, disableExperimentalSEAWarning: true };
+            const assets = {};
+            for (const line of (process.env.SEA_ASSETS || "").split(/\r?\n/)) {
+              const t = line.trim();
+              if (!t || t.startsWith("#")) continue;
+              const i = t.indexOf("=");
+              if (i < 1) throw new Error("sea_assets: expected name=path, got: " + t);
+              const name = t.slice(0, i).trim(), path = t.slice(i + 1).trim();
+              if (!fs.statSync(path, { throwIfNoEntry: false })?.isFile()) throw new Error("sea_assets: not a file: " + path);
+              assets[name] = path;
+            }
+            if (Object.keys(assets).length) cfg.assets = assets;
+            fs.writeFileSync(process.env.SEA_CONFIG, JSON.stringify(cfg, null, 2));
+          '
+          node --experimental-sea-config "$SEA_CONFIG"
+          cp "$(command -v node)" "$WORK/$COMMAND_NAME"
+          # Linux binaries carry no signature, so nothing needs removing before the injection.
+          npx --yes "postject@${POSTJECT_VERSION}" "$WORK/$COMMAND_NAME" NODE_SEA_BLOB "$BLOB" --sentinel-fuse "$SEA_SENTINEL"
+          chmod 0755 "$WORK/$COMMAND_NAME"
+          ls -l "$WORK"
+
+      - name: Assemble package tree
+        run: |
+          set -euo pipefail
+          ROOT="release_work/deb/${PACKAGE_NAME}_${VER}_amd64"
+          LIB="$ROOT/usr/lib/$PACKAGE_NAME"
+          DOC="$ROOT/usr/share/doc/$PACKAGE_NAME"
+          mkdir -p "$LIB" "$DOC" "$ROOT/DEBIAN" "$ROOT/usr/bin"
+
+          abs_ok() { case "$1" in /*) ;; *) return 1 ;; esac; case "/$1/" in */../*) return 1 ;; esac; }
+          rel_ok() { case "$1" in /*) return 1 ;; esac; case "/$1/" in */../*) return 1 ;; esac; }
+
+          # The program itself, and its command.
+          install -m 0755 "release_work/sea/$COMMAND_NAME" "$LIB/$COMMAND_NAME"
+          ln -sfn "/usr/lib/$PACKAGE_NAME/$COMMAND_NAME" "$ROOT/usr/bin/$COMMAND_NAME"
+
+          # Files and folders from the checkout or the build output -> absolute path and mode.
+          while read -r src dest mode _rest; do
+            case "${src:-}" in ''|'#'*) continue ;; esac
+            [ -z "${mode:-}" ] || [[ "$mode" =~ ^[0-7]{3,4}$ ]] || { echo "install_map: bad mode '$mode' for $src" >&2; exit 1; }
+            rel_ok "$src" || { echo "install_map: path must be relative and free of '..': '$src'" >&2; exit 1; }
+            abs_ok "${dest:-}" || { echo "install_map: install path must be absolute and free of '..': '${dest:-}'" >&2; exit 1; }
+            if [ -d "$src" ]; then
+              mkdir -p "$ROOT$dest"
+              cp -a "$src/." "$ROOT$dest/"
+              [ -z "$(find "$ROOT$dest" -type l -print -quit)" ] || { echo "install_map: $src contains symlinks; build output must be plain files" >&2; exit 1; }
+              find "$ROOT$dest" -type d -exec chmod 0755 {} +
+              if [ -n "${mode:-}" ]; then find "$ROOT$dest" -type f -exec chmod "$mode" {} +; else find "$ROOT$dest" -type f -exec chmod go-w {} +; fi
+            elif [ -f "$src" ]; then
+              install -D -m "${mode:-0644}" "$src" "$ROOT$dest"
+            else
+              echo "install_map: not found in the checkout or the build output: $src" >&2; exit 1
+            fi
+          done <<< "$INSTALL_MAP"
+          while read -r link target _rest; do
+            case "${link:-}" in ''|'#'*) continue ;; esac
+            { abs_ok "$link" && abs_ok "${target:-}"; } || { echo "symlinks: both paths must be absolute and free of '..': '$link' '${target:-}'" >&2; exit 1; }
+            mkdir -p "$ROOT$(dirname "$link")"
+            ln -sfn "$target" "$ROOT$link"
+          done <<< "$SYMLINKS"
+
+          # Conffiles: listed in DEBIAN/conffiles, and they must really be in the package.
+          while read -r c; do
+            case "${c:-}" in ''|'#'*) continue ;; esac
+            abs_ok "$c" || { echo "conffiles: path must be absolute: '$c'" >&2; exit 1; }
+            [ -f "$ROOT$c" ] || { echo "conffiles: $c is not installed by install_map" >&2; exit 1; }
+            echo "$c" >> "$ROOT/DEBIAN/conffiles"
+          done <<< "$CONFFILES"
+
+          # Maintainer scripts live in the repo (package glue, not a copy of the app's code).
+          if [ -n "$SCRIPTS_DIR" ]; then
+            [ -d "$SCRIPTS_DIR" ] || { echo "scripts_dir not found in the repo: $SCRIPTS_DIR" >&2; exit 1; }
+            for s in preinst postinst prerm postrm; do
+              [ ! -f "$SCRIPTS_DIR/$s" ] || install -m 0755 "$SCRIPTS_DIR/$s" "$ROOT/DEBIAN/$s"
+            done
+          fi
+
+          # A service should have a memory cap (node-service-deb.md); say so, but do not fail the release.
+          if [ -d "$ROOT/usr/lib/systemd/system" ]; then
+            while read -r u; do
+              grep -q '^MemoryMax=' "$u" || echo "::warning::${u#"$ROOT"} has no MemoryMax=; see node-service-deb.md"
+            done < <(find "$ROOT/usr/lib/systemd/system" -name '*.service' -type f)
+          fi
+
+          [ ! -f LICENSE ] || cp LICENSE "$DOC/copyright"
+          [ ! -f README.md ] || cp README.md "$DOC/README.md"
+          find "$ROOT" -type d -exec chmod 0755 {} +
+          find "$DOC" -type f -exec chmod 0644 {} +
+
+          SIZE_KB="$(du -sk --exclude=DEBIAN "$ROOT" | cut -f1)"
+          {
+            echo "Package: $PACKAGE_NAME"
+            echo "Version: $VER"
+            echo "Section: utils"
+            echo "Priority: optional"
+            echo "Architecture: amd64"
+            echo "Installed-Size: $SIZE_KB"
+            [ -z "$DEPENDS" ] || echo "Depends: $DEPENDS"
+            [ -z "$RECOMMENDS" ] || echo "Recommends: $RECOMMENDS"
+            echo "Maintainer: $MAINTAINER"
+            echo "Homepage: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+            echo "Description: $DESCRIPTION"
+          } > "$ROOT/DEBIAN/control"
+
+          mkdir -p release_out
+          dpkg-deb --build --root-owner-group "$ROOT" "release_out/${PACKAGE_NAME}_${VER}_amd64.deb"
+          echo "DEB=release_out/${PACKAGE_NAME}_${VER}_amd64.deb" >> "$GITHUB_ENV"
+
+      - name: Show what was built
+        run: |
+          set -euo pipefail
+          dpkg-deb --info "$DEB"
+          dpkg-deb --contents "$DEB"
+          # Maintainer scripts must at least parse.
+          T="$(mktemp -d)"
+          dpkg-deb --control "$DEB" "$T"
+          for f in preinst postinst prerm postrm; do
+            [ ! -f "$T/$f" ] || sh -n "$T/$f"
+          done
+
+      # Drift guard: install the package like a user would and make sure it is the tag's version.
+      - name: Smoke test (install, run, remove, purge)
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y "./$DEB"
+          OUT="$("$COMMAND_NAME" $SMOKE_ARGS 2>&1)"
+          echo "$COMMAND_NAME $SMOKE_ARGS -> $OUT"
+          case "$OUT" in
+            *"$VER"*) ;;
+            *) echo "the installed command did not report version $VER; the package does not match the tag" >&2; exit 1 ;;
+          esac
+          sudo apt-get remove -y "$PACKAGE_NAME"
+          if command -v "$COMMAND_NAME" >/dev/null; then echo "$COMMAND_NAME is still installed after removing the package" >&2; exit 1; fi
+          # Purge too, so the postrm purge path has run once before a release ships.
+          sudo apt-get purge -y "$PACKAGE_NAME"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.package_name }}-deb
+          path: ${{ env.DEB }}
+
+      - name: Attach to the GitHub Release
+        if: inputs.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: ${{ env.DEB }}
+          append_body: true
+          generate_release_notes: ${{ inputs.generate_release_notes }}
+          body: |
+
+            ## Debian / Ubuntu (amd64)
+
+            Download `${{ env.PACKAGE_NAME }}_${{ env.VER }}_amd64.deb`, then install (or upgrade) it with
+            `sudo apt install ./${{ env.PACKAGE_NAME }}_${{ env.VER }}_amd64.deb`.
+            ${{ inputs.release_note != '' && inputs.release_note || format('It is one self-contained program (its own Node runtime is inside) and installs the `{0}` command and its systemd units. Remove it with `sudo apt remove {1}`; your data and settings are kept until `purge`.', env.COMMAND_NAME, env.PACKAGE_NAME) }}
+
+  windows:
+    # After the deb job, so the two appends to the Release body never race.
+    needs: deb
+    if: inputs.windows
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      VERSION: ${{ inputs.version }}
+      PACKAGE_NAME: ${{ inputs.package_name }}
+      COMMAND_NAME: ${{ inputs.command_name }}
+      EXE_NAME: ${{ inputs.windows_exe_name }}
+      BUILD_COMMAND: ${{ inputs.build_command }}
+      BUNDLE: ${{ inputs.bundle }}
+      NODE_VERSION: ${{ inputs.node_version }}
+      SEA_ASSETS: ${{ inputs.sea_assets }}
+      WINDOWS_FILES: ${{ inputs.windows_files }}
+      WINDOWS_README: ${{ inputs.windows_readme }}
+      SMOKE_ARGS: ${{ inputs.smoke_args }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          VER="${VERSION#v}"
+          [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version must look like 1.2.3 or v1.2.3, got '$VERSION'" >&2; exit 1; }
+          [[ "$PACKAGE_NAME" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "invalid package_name '$PACKAGE_NAME'" >&2; exit 1; }
+          [ -n "$EXE_NAME" ] || EXE_NAME="${COMMAND_NAME}.exe"
+          [[ "$EXE_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*\.exe$ ]] || { echo "invalid windows_exe_name '$EXE_NAME'" >&2; exit 1; }
+          case "$BUNDLE" in ''|/*|*..*) echo "bundle must be a relative path without '..': '$BUNDLE'" >&2; exit 1 ;; esac
+          echo "VER=$VER" >> "$GITHUB_ENV"
+          echo "EXE_NAME=$EXE_NAME" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+
+      - name: Build the bundle
+        env:
+          APP_VERSION: ${{ env.VER }}
+        run: |
+          set -euo pipefail
+          node --version
+          bash -euo pipefail -c "$BUILD_COMMAND"
+          [ -f "$BUNDLE" ] || { echo "build_command did not produce the bundle: $BUNDLE" >&2; exit 1; }
+
+      - name: Make the single-executable program
+        run: |
+          set -euo pipefail
+          WORK=release_work/sea
+          mkdir -p "$WORK"
+          BLOB="$WORK/sea-prep.blob"
+          export BLOB SEA_CONFIG="$WORK/sea-config.json"
+          node -e '
+            const fs = require("fs");
+            const cfg = { main: process.env.BUNDLE, output: process.env.BLOB, disableExperimentalSEAWarning: true };
+            const assets = {};
+            for (const line of (process.env.SEA_ASSETS || "").split(/\r?\n/)) {
+              const t = line.trim();
+              if (!t || t.startsWith("#")) continue;
+              const i = t.indexOf("=");
+              if (i < 1) throw new Error("sea_assets: expected name=path, got: " + t);
+              const name = t.slice(0, i).trim(), path = t.slice(i + 1).trim();
+              if (!fs.statSync(path, { throwIfNoEntry: false })?.isFile()) throw new Error("sea_assets: not a file: " + path);
+              assets[name] = path;
+            }
+            if (Object.keys(assets).length) cfg.assets = assets;
+            fs.writeFileSync(process.env.SEA_CONFIG, JSON.stringify(cfg, null, 2));
+          '
+          node --experimental-sea-config "$SEA_CONFIG"
+          cp "$(command -v node)" "$WORK/$EXE_NAME"
+          # Removing node.exe's signature before injecting is optional; do it when signtool is on the runner.
+          SIGNTOOL="$(command -v signtool || true)"
+          [ -n "$SIGNTOOL" ] || SIGNTOOL="$(ls -d "/c/Program Files (x86)/Windows Kits/10/bin/"*/x64/signtool.exe 2>/dev/null | sort | tail -n 1 || true)"
+          if [ -n "$SIGNTOOL" ]; then "$SIGNTOOL" remove /s "$WORK/$EXE_NAME" || echo "signtool could not remove the signature; continuing"; else echo "signtool not found; continuing"; fi
+          npx --yes "postject@${POSTJECT_VERSION}" "$WORK/$EXE_NAME" NODE_SEA_BLOB "$BLOB" --sentinel-fuse "$SEA_SENTINEL"
+          ls -l "$WORK"
+
+      - name: Smoke test (the program reports the tag's version)
+        run: |
+          set -euo pipefail
+          OUT="$(./release_work/sea/"$EXE_NAME" $SMOKE_ARGS 2>&1)"
+          echo "$EXE_NAME $SMOKE_ARGS -> $OUT"
+          case "$OUT" in
+            *"$VER"*) ;;
+            *) echo "the program did not report version $VER; it does not match the tag" >&2; exit 1 ;;
+          esac
+
+      - name: Assemble the zip
+        run: |
+          set -euo pipefail
+          STAGE="release_work/win/${PACKAGE_NAME}_${VER}_windows-x64"
+          mkdir -p "$STAGE" release_out
+          cp "release_work/sea/$EXE_NAME" "$STAGE/$EXE_NAME"
+          while read -r src dest _rest; do
+            case "${src:-}" in ''|'#'*) continue ;; esac
+            case "$src $dest" in *..*|/*|*" /"*) echo "windows_files: relative paths without '..' only: '$src' '$dest'" >&2; exit 1 ;; esac
+            [ -e "$src" ] || { echo "windows_files: not found: $src" >&2; exit 1; }
+            mkdir -p "$STAGE/$(dirname "$dest")"
+            if [ -d "$src" ]; then mkdir -p "$STAGE/$dest"; cp -a "$src/." "$STAGE/$dest/"; else cp -a "$src" "$STAGE/$dest"; fi
+          done <<< "$WINDOWS_FILES"
+          if [ -n "$WINDOWS_README" ]; then
+            [ -f "$WINDOWS_README" ] || { echo "windows_readme not found in the repo: $WINDOWS_README" >&2; exit 1; }
+            cp "$WINDOWS_README" "$STAGE/README.txt"
+          else
+            {
+              echo "$PACKAGE_NAME $VER for Windows (x64)"
+              echo
+              echo "$EXE_NAME is one self-contained program: it carries its own Node runtime, so nothing else needs"
+              echo "to be installed. Run '$EXE_NAME --help' in a terminal for what it does."
+              echo
+              echo "This build is not code-signed, so Windows SmartScreen may warn the first time it runs."
+              echo "Source and documentation: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+            } > "$STAGE/README.txt"
+          fi
+          [ ! -f LICENSE ] || cp LICENSE "$STAGE/LICENSE.txt"
+          ZIP="release_out/${PACKAGE_NAME}_${VER}_windows-x64.zip"
+          (cd release_work/win && 7z a -tzip "$GITHUB_WORKSPACE/$ZIP" "${PACKAGE_NAME}_${VER}_windows-x64" > /dev/null)
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.package_name }}-windows
+          path: ${{ env.ZIP }}
+
+      - name: Attach to the GitHub Release
+        if: inputs.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: ${{ env.ZIP }}
+          append_body: true
+          body: |
+
+            ## Windows (x64)
+
+            Download `${{ env.PACKAGE_NAME }}_${{ env.VER }}_windows-x64.zip`, unzip it and run `${{ env.EXE_NAME }}`. It is one self-contained program, not code-signed yet.

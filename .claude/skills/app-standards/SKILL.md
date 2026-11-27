@@ -9,7 +9,7 @@ Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards)
 This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
 `update-check-versioning.md` / `licensing.md` / `db-location-versioning.md`
-/ `electron-menu.md` / `secrets.md` / `game-repos.md` / `.github/workflows/` over anything
+/ `electron-menu.md` / `secrets.md` / `game-repos.md` / `deb-packaging.md` / `node-service-deb.md` / `.github/workflows/` over anything
 cached here.
 
 ## Docs must point back here
@@ -172,6 +172,7 @@ First classify the repo — the shape of "release" differs by category:
 | Godot game | GDScript project (no C#/.NET), ships a native desktop export end users download | Same as Desktop GUI app/plugin, calling `release-godot.yml` — see `game-repos.md` for the full breakdown (theming and icon generation are not yet covered for this category). |
 | Claude Code plugin / mod | `.claude-plugin/plugin.json`; installed from the repo through a marketplace, no build artifact | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-claude-plugin.yml` (needs `plugin_name`), plus `templates/ci-claude-plugin.yml` as `ci.yml`. Omit `version` from the manifest and marketplace entry. Full rules: `claude-plugins.md`. With a companion Electron app in `app/`: the `*-plugin-app.yml` templates instead |
 | Static site engine / niche site | `directory-engine` (Go generator, tag-only release) or a niche repo with `site.yaml` + listings, built by the engine, published not released | Engine: `templates/ci.yml` with `working_directory: .` and `run_tests: true`, plus `templates/cut-tag.yml`. Niche: no release pipeline; `directory-engine validate -strict` in CI. Full rules: `static-sites.md` |
+| Node service shipped as a `.deb` | Headless Node server (hub/worker), no GUI, runs on Debian/Ubuntu and optionally Windows | The desktop job set plus a `node-deb` job in **both** `auto-release.yml` and `cut-release.yml` calling `release-node-deb.yml` (needs `package_name`, `command_name`, `description`, `build_command`, `bundle`), and a `publish: false` call in `ci.yml`. Full rules: `node-service-deb.md` |
 | Python MCP server / headless uv package | `pyproject.toml` + `uv.lock`, console script, no GUI, no PyInstaller; users install from the tag with `uv tool install git+...` | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-python-mcp.yml` (needs `package_name`), `templates/VERSION_BUMP.md`, plus `templates/ci-python.yml` as `ci.yml`. Theming, logo, update-check, installer and menu are N/A. Full rules: `python-mcp-servers.md` |
 | Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. This is the "New tech stacks" case above — ask the human before designing a new pattern. |
 
@@ -357,6 +358,28 @@ runtime is standard-library-only. Source of truth: [`deb-packaging.md`](https://
 - **Violation to flag:** a `.deb` job missing from only one of `auto-release.yml`/`cut-release.yml`.
 - **Not a violation:** a repo with no `.deb` at all. It is optional; only apps that run on Debian machines
   need it. Apps with pip dependencies are out of scope: bring that design here first.
+
+## Node service as a .deb
+
+Applies to a headless Node service (a hub/worker server, no window) that should install on Debian/Ubuntu and
+optionally run on Windows. Source of truth: [`node-service-deb.md`](https://github.com/gerp93/KVG_Standards/blob/main/node-service-deb.md)
+(extends `deb-packaging.md`). First consumer, not yet wired: FileShuttle's hub/worker server.
+
+- A `node-deb` job calling `release-node-deb.yml` sits in **both** `auto-release.yml` and `cut-release.yml`,
+  `needs:` on the build job, with identical inputs, plus a `ci.yml` job with `publish: false`. The server is built by
+  the app's own `build_command` into ONE CommonJS `bundle`; the version reaches the build as `APP_VERSION`.
+- It is one self-contained program (Node SEA, own Node runtime, default Node 24), packaged `amd64` with systemd
+  units, maintainer scripts from `scripts_dir`, settings as conffiles, data in `/var/lib/<name>/` (kept on remove,
+  deleted only on purge). No Docker, no Node from apt.
+- Units carry `MemoryMax=`. A service that can change files listens on localhost only and is reached over the
+  tailnet with `tailscale serve`, never Funnel or a public port.
+- On Windows the app decides how it runs (a Scheduled Task at logon when it needs the user's Recycle Bin) through
+  its own `install` subcommand; the workflow only zips the `.exe` (`windows: true`).
+- **Violation to flag:** a Node server `.deb`, Docker image or hand-built binary made outside
+  `release-node-deb.yml`, a `debian/` copy of the code, a unit with no `MemoryMax=`, or a file-changing service
+  bound to `0.0.0.0`/exposed with Funnel.
+- **Violation to flag:** the job missing from only one of `auto-release.yml`/`cut-release.yml`.
+- **Not covered yet (bring it here first):** arm64, signing, an apt repository.
 
 ## Update-check
 

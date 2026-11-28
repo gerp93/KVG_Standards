@@ -37,8 +37,9 @@ the rules not repeated here are the same.
   first (an address, a sign-in) is **enabled but not started** until its own config check passes.
 - **Units** carry `MemoryMax=` (warned when missing), run as the package's own user with `NoNewPrivileges=yes`,
   `ProtectSystem=strict` and `ReadWritePaths=/var/lib/<package_name>`, and listen on **localhost only**.
-- `ci.yml` calls the same workflow on pull requests with `version: v0.0.0` and `publish: false`, next to
-  `ci-go.yml` with `run_tests: true`.
+- `ci.yml` calls the same workflow on pull requests with `version: v0.0.0`, `publish: false` and
+  `permissions: contents: read`, next to `ci-go.yml` with `run_tests: true`. Release callers grant
+  `contents: write`. The workflow sets no permissions itself, so the caller's grant is what applies.
 
 ## Secrets
 

@@ -29,7 +29,10 @@ name: Release (Go service .deb)
 #       contents: write
 #
 # From ci.yml on pull requests, pass `version: v0.0.0` and `publish: false` to build and smoke-test the package
-# without releasing anything.
+# without releasing anything, and grant only `contents: read`.
+#
+# This workflow sets no permissions of its own, so the caller's grant is the one that applies. A called workflow
+# may not ask for more than its caller grants, and GitHub fails the whole run before any job starts if it does.
 
 on:
   workflow_call:
@@ -124,9 +127,6 @@ on:
         required: false
         type: boolean
         default: true
-
-permissions:
-  contents: write
 
 jobs:
   deb:

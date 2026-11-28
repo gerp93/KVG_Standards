@@ -9,7 +9,7 @@ Source of truth: [gerp93/KVG_Standards](https://github.com/gerp93/KVG_Standards)
 This skill is a checklist, not a copy of the standard — always defer to that
 repo's current `README.md` / `themes-versioning.md` /
 `update-check-versioning.md` / `licensing.md` / `db-location-versioning.md`
-/ `electron-menu.md` / `secrets.md` / `game-repos.md` / `deb-packaging.md` / `node-service-deb.md` / `.github/workflows/` over anything
+/ `electron-menu.md` / `secrets.md` / `game-repos.md` / `deb-packaging.md` / `node-service-deb.md` / `go-service-deb.md` / `.github/workflows/` over anything
 cached here.
 
 ## Docs must point back here
@@ -173,6 +173,7 @@ First classify the repo — the shape of "release" differs by category:
 | Claude Code plugin / mod | `.claude-plugin/plugin.json`; installed from the repo through a marketplace, no build artifact | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-claude-plugin.yml` (needs `plugin_name`), plus `templates/ci-claude-plugin.yml` as `ci.yml`. Omit `version` from the manifest and marketplace entry. Full rules: `claude-plugins.md`. With a companion Electron app in `app/`: the `*-plugin-app.yml` templates instead |
 | Static site engine / niche site | `directory-engine` (Go generator, tag-only release) or a niche repo with `site.yaml` + listings, built by the engine, published not released | Engine: `templates/ci.yml` with `working_directory: .` and `run_tests: true`, plus `templates/cut-tag.yml`. Niche: no release pipeline; `directory-engine validate -strict` in CI. Full rules: `static-sites.md` |
 | Node service shipped as a `.deb` | Headless Node server (hub/worker), no GUI, runs on Debian/Ubuntu and optionally Windows | The desktop job set plus a `node-deb` job in **both** `auto-release.yml` and `cut-release.yml` calling `release-node-deb.yml` (needs `package_name`, `command_name`, `description`, `build_command`, `bundle`), and a `publish: false` call in `ci.yml`. Full rules: `node-service-deb.md` |
+| Go service shipped as a `.deb` | Headless Go server (`cmd/<name>`), no GUI, runs on the house server or another Debian/Ubuntu box | A `go-deb` job in **both** `auto-release.yml` and `cut-release.yml` calling `release-go-deb.yml` (needs `package_name`, `command_name`, `main_package`, `description`), plus `ci-go.yml` with `run_tests: true` and a `publish: false` call in `ci.yml`. Full rules, including the remote MCP gateway exception: `go-service-deb.md` |
 | Python MCP server / headless uv package | `pyproject.toml` + `uv.lock`, console script, no GUI, no PyInstaller; users install from the tag with `uv tool install git+...` | **Both** `templates/auto-release.yml` and `templates/cut-release.yml` calling `release-python-mcp.yml` (needs `package_name`), `templates/VERSION_BUMP.md`, plus `templates/ci-python.yml` as `ci.yml`. Theming, logo, update-check, installer and menu are N/A. Full rules: `python-mcp-servers.md` |
 | Anything else (CLI utility, plugin with its own distribution model, no code yet) | — | Don't force it into one of the above. This is the "New tech stacks" case above — ask the human before designing a new pattern. |
 
@@ -380,6 +381,23 @@ optionally run on Windows. Source of truth: [`node-service-deb.md`](https://gith
   bound to `0.0.0.0`/exposed with Funnel.
 - **Violation to flag:** the job missing from only one of `auto-release.yml`/`cut-release.yml`.
 - **Not covered yet (bring it here first):** arm64, signing, an apt repository.
+
+## Go service as a .deb
+
+Applies to a headless Go service that installs on Debian/Ubuntu. Source of truth:
+[`go-service-deb.md`](https://github.com/gerp93/KVG_Standards/blob/main/go-service-deb.md). First consumer: kvg-mcp-gateway.
+
+- A `go-deb` job calling `release-go-deb.yml` in **both** `auto-release.yml` and `cut-release.yml`, identical inputs;
+  `ci.yml` runs `ci-go.yml` (`run_tests: true`) and the same workflow with `publish: false`.
+- One static binary, version from the tag through `-ldflags -X main.version=`, `--version` prints it. Units carry
+  `MemoryMax=`, run as the package's user, listen on localhost. Secrets in `/etc/<name>/secrets.json` (0600), never
+  packaged.
+- An internet-facing service is allowed only as the box's one remote MCP gateway, in the shape `go-service-deb.md`
+  sets (Cloudflare Tunnel + Access, the pass re-checked in the gateway, allow list, prepare/confirm for changes,
+  call log).
+- **Violation to flag:** a Go server `.deb` or binary made outside `release-go-deb.yml`, a unit with no
+  `MemoryMax=`, a second internet-facing service on the same box, or a gateway tool that changes something without
+  the prepare/confirm pair.
 
 ## Update-check
 

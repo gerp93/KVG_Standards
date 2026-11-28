@@ -21,6 +21,8 @@ not a consumer. kvgrep and Valutique are excluded (no code yet).
 
 **Node services shipped as a `.deb`** (a headless server as one self-contained program with its own Node runtime, `amd64` package with systemd units, optional Windows `.exe`) are covered by [`node-service-deb.md`](node-service-deb.md) and `release-node-deb.yml` (approved 2026-11-27). FileShuttle's hub/worker server will be the first consumer; not yet wired.
 
+**Go services shipped as a `.deb`** (one static binary, `amd64` package with a systemd unit) are covered by [`go-service-deb.md`](go-service-deb.md) and `release-go-deb.yml` (approved 2026-11-28), which also sets the rules for a box's one internet-facing service, its remote MCP gateway. Tracked here: [kvg-mcp-gateway](https://github.com/gerp93/kvg-mcp-gateway) (the house server's MCP gateway; added 2026-11-28, see its section at the end).
+
 **Static sites** (the `directory-engine` generator and the niche repos built with it) are another separate category with their own standard, [`static-sites.md`](static-sites.md). Tracked here: [directory-engine](https://github.com/gerp93/directory-engine) (engine; see its section at the end).
 
 **Python MCP servers / headless uv packages** are another separate category with their own standard, [`python-mcp-servers.md`](python-mcp-servers.md) (no GUI, so theming, logo, update-check and installer are N/A). Tracked here: [ColorBookForge](https://github.com/gerp93/ColorBookForge) (MCP server for KDP coloring-book interiors; added 2026-11-18, first consumer of `release-python-mcp.yml` and `ci-python.yml`).
@@ -1178,3 +1180,20 @@ specifically.
   `gh release download` on the PC, `scp`, `apt install` (documented in its README). The shared `.deb` has no long
   description or changelog (`lintian` errors `extended-description-is-empty`, `no-changelog`), same as
   SoSmartButNeverPunctual's. Not yet run on Debian 13 or on the house server (see its `TODO.md`).
+
+## Go services shipped as a .deb
+
+### kvg-mcp-gateway
+- **Added 2026-11-28** ([gerp93/kvg-mcp-gateway](https://github.com/gerp93/kvg-mcp-gateway), AGPL-3.0): the Holocron's remote MCP
+  gateway, so Claude on the owner's phone can reach the house server's apps (Holocron status, KVGuzzler, game
+  health, and File Shuttle's own MCP server as a passthrough) through one door. Go, one static binary.
+- Category: Go service `.deb` ([`go-service-deb.md`](go-service-deb.md), first consumer of `release-go-deb.yml`),
+  under that standard's remote MCP gateway rules: Cloudflare Tunnel + Access with the pass re-checked in the gateway
+  (GitHub OAuth fallback built in, off by default), allow list, read-only by default, prepare/confirm for anything
+  that changes something, call log, rate and size limits. Sweeper is refused by the settings check.
+- Both `auto-release.yml` and `cut-release.yml`, `ci.yml` (`ci-go.yml` with tests, plus the package built with
+  `publish: false`), `VERSION_BUMP.md`, `TODO.md`, AGPL-3.0 `LICENSE`, `.gitignore` with the secrets entries.
+- N/A by design: theming, logo, update-check (apt upgrades it), installer, application menu, DB location (no
+  database; a JSON-lines call log in `/var/lib/kvg-mcp-gateway`), 1.0 readiness (not a desktop GUI app).
+- Known: not live yet. The domain is not picked, so `public_host` and the Access settings are empty and the packaged
+  service stays stopped until they are filled in. Not yet installed on the Holocron.

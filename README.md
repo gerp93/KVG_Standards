@@ -94,7 +94,9 @@ A Python app that also runs on Debian/Ubuntu servers, or a headless scripts-and-
 as the rest of the release, with a smoke test that installs it and checks it reports the tag's version, so it
 cannot drift from the app. See [`deb-packaging.md`](deb-packaging.md). A headless **Node** service ships the same way
 as one self-contained program (its own Node runtime, built with Node's single-executable feature) in an `amd64` `.deb`
-with systemd units, plus an optional Windows `.exe` zip; see [`node-service-deb.md`](node-service-deb.md).
+with systemd units, plus an optional Windows `.exe` zip; see [`node-service-deb.md`](node-service-deb.md). A headless
+**Go** service ships as one static binary in an `amd64` `.deb`; see [`go-service-deb.md`](go-service-deb.md), which also
+sets the rules for the one internet-facing service allowed on a box, its remote MCP gateway.
 
 ## Update-check
 
@@ -185,6 +187,7 @@ evaluation results are in `REPO_SCOPE.md`.
 | `release-python-gui.yml` | PyInstaller-packaged Python GUI apps; optional `test_command` | KVGrainy, KVGroove, kvg_converter |
 | `release-deb.yml` | A `.deb` for a standard-library-only Python app, or for a scripts-and-systemd package (file map, conffiles, maintainer scripts), built from the same files, commit and tag as its other release builds (add after the build job, or straight after the tag job in a package-only repo); see [`deb-packaging.md`](deb-packaging.md) | SoSmartButNeverPunctual, Netwatch |
 | `release-node-deb.yml` | A headless Node service as one self-contained program (Node SEA, own runtime) in an `amd64` `.deb` with systemd units, plus an optional Windows `.exe` zip, built from the app's own bundle, same commit and tag as its other release builds; see [`node-service-deb.md`](node-service-deb.md) | FileShuttle (hub/worker server; to be wired) |
+| `release-go-deb.yml` | A headless Go service as one static binary in an `amd64` `.deb` with its systemd unit, conffiles and maintainer scripts, version baked in with `-ldflags -X`, tests run first, install/remove/purge smoke test; see [`go-service-deb.md`](go-service-deb.md) | kvg-mcp-gateway |
 | `release-go-gui.yml` | Wails (Go) desktop apps; optional `test_command` | gameshell-deploy (gui/) |
 | `release-electron.yml` | Electron desktop apps; `app_dir` for an app in a subfolder, `skip_release_notes` when sharing a release with a plugin, optional `test_command` | sweeper, Shipwatch (app/) |
 | `release-flet.yml` | Flet desktop apps; optional `test_command` | kvgenius |

@@ -1,0 +1,317 @@
+name: Release (Go service .deb)
+
+# Reusable workflow: builds a headless Go service (a command under cmd/) as ONE static amd64 binary, packs it as
+# a .deb with its systemd unit, settings file and maintainer scripts, and attaches it to the GitHub Release for
+# the tag. Design and rules: go-service-deb.md. It is the Go sibling of release-node-deb.yml and takes the same
+# packaging inputs (install_map, symlinks, conffiles, scripts_dir), so a service moves between the two without
+# relearning anything.
+#
+# The version comes from the tag and is baked in with -ldflags "-X <version_var>=<version>"; a smoke test
+# installs the .deb and checks that the installed command reports that version (a stale or mismatched package
+# fails the release), then removes and purges it so the maintainer scripts have run once.
+#
+#   go-deb:
+#     needs: version
+#     uses: gerp93/KVG_Standards/.github/workflows/release-go-deb.yml@main
+#     with:
+#       version: ${{ needs.version.outputs.new_tag }}    # cut-release.yml: needs.tag.outputs.version
+#       package_name: kvg-mcp-gateway
+#       command_name: kvg-mcp-gateway
+#       main_package: ./cmd/kvg-mcp-gateway
+#       description: The Holocron's MCP gateway
+#       install_map: |
+#         packaging/systemd/kvg-mcp-gateway.service /usr/lib/systemd/system/kvg-mcp-gateway.service
+#         packaging/etc/gateway.conf /etc/kvg-mcp-gateway/gateway.conf 0640
+#       conffiles: /etc/kvg-mcp-gateway/gateway.conf
+#       scripts_dir: packaging/debian
+#       generate_release_notes: true
+#     permissions:
+#       contents: write
+#
+# From ci.yml on pull requests, pass `version: v0.0.0` and `publish: false` to build and smoke-test the package
+# without releasing anything.
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: 'Tag being released, e.g. v1.2.3 (the package version is 1.2.3)'
+        required: true
+        type: string
+      package_name:
+        description: 'Debian package name: lowercase letters, digits, "+", "-" and "." only'
+        required: true
+        type: string
+      command_name:
+        description: 'Name of the program: installed as /usr/lib/<package_name>/<command_name> (0755) with a /usr/bin/<command_name> symlink'
+        required: true
+        type: string
+      main_package:
+        description: 'Go package to build, relative to working_directory, e.g. ./cmd/kvg-mcp-gateway'
+        required: true
+        type: string
+      description:
+        description: 'One-line package description'
+        required: true
+        type: string
+      working_directory:
+        description: 'Directory containing go.mod'
+        required: false
+        type: string
+        default: '.'
+      version_var:
+        description: 'Go variable set to the bare version (1.2.3) with -ldflags -X'
+        required: false
+        type: string
+        default: 'main.version'
+      test_command:
+        description: 'Shell command run in working_directory before anything is built. Empty skips it'
+        required: false
+        type: string
+        default: 'go test ./...'
+      install_map:
+        description: 'One "<path> <absolute install path> [mode]" per line (mode defaults to 0644); the path is relative to the repo root and may be a directory'
+        required: false
+        type: string
+        default: ''
+      symlinks:
+        description: 'One "<link path> <target>" per line, both absolute. /usr/bin/<command_name> is always made first; a line here for the same link replaces it'
+        required: false
+        type: string
+        default: ''
+      conffiles:
+        description: 'Absolute paths, one per line, that are conffiles; each must also be installed by install_map'
+        required: false
+        type: string
+        default: ''
+      scripts_dir:
+        description: 'Directory in the repo holding preinst, postinst, prerm and/or postrm'
+        required: false
+        type: string
+        default: ''
+      depends:
+        description: 'Debian Depends field. The binary is static (CGO_ENABLED=0), so the default is only what the maintainer scripts use'
+        required: false
+        type: string
+        default: 'adduser'
+      recommends:
+        description: 'Debian Recommends field'
+        required: false
+        type: string
+        default: ''
+      maintainer:
+        description: 'Debian Maintainer field'
+        required: false
+        type: string
+        default: 'gerp93 <gerp93@users.noreply.github.com>'
+      smoke_args:
+        description: 'Arguments for the post-install check; the command must print the package version'
+        required: false
+        type: string
+        default: '--version'
+      release_note:
+        description: 'Text appended to the GitHub Release body under "## Debian / Ubuntu". Empty = the default text'
+        required: false
+        type: string
+        default: ''
+      generate_release_notes:
+        description: 'Let GitHub generate the changelog for the Release body. True when this workflow creates the Release'
+        required: false
+        type: boolean
+        default: false
+      publish:
+        description: 'Attach the .deb to the GitHub Release for the tag. False only builds and tests it (still uploaded as a workflow artifact)'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  deb:
+    runs-on: ubuntu-latest
+    env:
+      VERSION: ${{ inputs.version }}
+      PACKAGE_NAME: ${{ inputs.package_name }}
+      COMMAND_NAME: ${{ inputs.command_name }}
+      MAIN_PACKAGE: ${{ inputs.main_package }}
+      WORKDIR: ${{ inputs.working_directory }}
+      VERSION_VAR: ${{ inputs.version_var }}
+      TEST_COMMAND: ${{ inputs.test_command }}
+      DESCRIPTION: ${{ inputs.description }}
+      INSTALL_MAP: ${{ inputs.install_map }}
+      SYMLINKS: ${{ inputs.symlinks }}
+      CONFFILES: ${{ inputs.conffiles }}
+      SCRIPTS_DIR: ${{ inputs.scripts_dir }}
+      DEPENDS: ${{ inputs.depends }}
+      RECOMMENDS: ${{ inputs.recommends }}
+      MAINTAINER: ${{ inputs.maintainer }}
+      SMOKE_ARGS: ${{ inputs.smoke_args }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate inputs
+        run: |
+          set -euo pipefail
+          VER="${VERSION#v}"
+          [[ "$VER" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "version must look like 1.2.3 or v1.2.3, got '$VERSION'" >&2; exit 1; }
+          [[ "$PACKAGE_NAME" =~ ^[a-z0-9][a-z0-9+.-]+$ ]] || { echo "invalid package_name '$PACKAGE_NAME'" >&2; exit 1; }
+          [[ "$COMMAND_NAME" =~ ^[A-Za-z0-9][A-Za-z0-9._-]*$ ]] || { echo "invalid command_name '$COMMAND_NAME'" >&2; exit 1; }
+          [[ "$MAIN_PACKAGE" =~ ^\./[A-Za-z0-9._/-]*$ ]] && [[ "$MAIN_PACKAGE" != *..* ]] || { echo "main_package must look like ./cmd/name, got '$MAIN_PACKAGE'" >&2; exit 1; }
+          [[ "$VERSION_VAR" =~ ^[A-Za-z0-9_./-]+\.[A-Za-z_][A-Za-z0-9_]*$ ]] || { echo "invalid version_var '$VERSION_VAR'" >&2; exit 1; }
+          case "$WORKDIR" in /*|*..*) echo "working_directory must be relative without '..'" >&2; exit 1 ;; esac
+          [ -f "$WORKDIR/go.mod" ] || { echo "no go.mod in $WORKDIR" >&2; exit 1; }
+          echo "VER=$VER" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ inputs.working_directory }}/go.mod
+
+      - name: Vet and test
+        working-directory: ${{ inputs.working_directory }}
+        run: |
+          set -euo pipefail
+          go vet ./...
+          if [ -n "$TEST_COMMAND" ]; then bash -euo pipefail -c "$TEST_COMMAND"; fi
+
+      - name: Build the binary
+        working-directory: ${{ inputs.working_directory }}
+        env:
+          CGO_ENABLED: '0'
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          set -euo pipefail
+          mkdir -p "$GITHUB_WORKSPACE/release_work/bin"
+          go build -trimpath -buildvcs=false -ldflags "-s -w -X ${VERSION_VAR}=${VER}" -o "$GITHUB_WORKSPACE/release_work/bin/$COMMAND_NAME" "$MAIN_PACKAGE"
+          file "$GITHUB_WORKSPACE/release_work/bin/$COMMAND_NAME"
+
+      - name: Assemble package tree
+        run: |
+          set -euo pipefail
+          ROOT="release_work/deb/${PACKAGE_NAME}_${VER}_amd64"
+          LIB="$ROOT/usr/lib/$PACKAGE_NAME"
+          DOC="$ROOT/usr/share/doc/$PACKAGE_NAME"
+          mkdir -p "$LIB" "$DOC" "$ROOT/DEBIAN" "$ROOT/usr/bin"
+
+          abs_ok() { case "$1" in /*) ;; *) return 1 ;; esac; case "/$1/" in */../*) return 1 ;; esac; }
+          rel_ok() { case "$1" in /*) return 1 ;; esac; case "/$1/" in */../*) return 1 ;; esac; }
+
+          install -m 0755 "release_work/bin/$COMMAND_NAME" "$LIB/$COMMAND_NAME"
+          ln -sfn "/usr/lib/$PACKAGE_NAME/$COMMAND_NAME" "$ROOT/usr/bin/$COMMAND_NAME"
+
+          while read -r src dest mode _rest; do
+            case "${src:-}" in ''|'#'*) continue ;; esac
+            [ -z "${mode:-}" ] || [[ "$mode" =~ ^[0-7]{3,4}$ ]] || { echo "install_map: bad mode '$mode' for $src" >&2; exit 1; }
+            rel_ok "$src" || { echo "install_map: path must be relative and free of '..': '$src'" >&2; exit 1; }
+            abs_ok "${dest:-}" || { echo "install_map: install path must be absolute and free of '..': '${dest:-}'" >&2; exit 1; }
+            if [ -d "$src" ]; then
+              mkdir -p "$ROOT$dest"
+              cp -a "$src/." "$ROOT$dest/"
+              [ -z "$(find "$ROOT$dest" -type l -print -quit)" ] || { echo "install_map: $src contains symlinks" >&2; exit 1; }
+              find "$ROOT$dest" -type d -exec chmod 0755 {} +
+              if [ -n "${mode:-}" ]; then find "$ROOT$dest" -type f -exec chmod "$mode" {} +; else find "$ROOT$dest" -type f -exec chmod go-w {} +; fi
+            elif [ -f "$src" ]; then
+              install -D -m "${mode:-0644}" "$src" "$ROOT$dest"
+            else
+              echo "install_map: not found in the checkout: $src" >&2; exit 1
+            fi
+          done <<< "$INSTALL_MAP"
+          while read -r link target _rest; do
+            case "${link:-}" in ''|'#'*) continue ;; esac
+            { abs_ok "$link" && abs_ok "${target:-}"; } || { echo "symlinks: both paths must be absolute and free of '..'" >&2; exit 1; }
+            mkdir -p "$ROOT$(dirname "$link")"
+            ln -sfn "$target" "$ROOT$link"
+          done <<< "$SYMLINKS"
+
+          while read -r c; do
+            case "${c:-}" in ''|'#'*) continue ;; esac
+            abs_ok "$c" || { echo "conffiles: path must be absolute: '$c'" >&2; exit 1; }
+            [ -f "$ROOT$c" ] || { echo "conffiles: $c is not installed by install_map" >&2; exit 1; }
+            echo "$c" >> "$ROOT/DEBIAN/conffiles"
+          done <<< "$CONFFILES"
+
+          if [ -n "$SCRIPTS_DIR" ]; then
+            [ -d "$SCRIPTS_DIR" ] || { echo "scripts_dir not found in the repo: $SCRIPTS_DIR" >&2; exit 1; }
+            for s in preinst postinst prerm postrm; do
+              [ ! -f "$SCRIPTS_DIR/$s" ] || install -m 0755 "$SCRIPTS_DIR/$s" "$ROOT/DEBIAN/$s"
+            done
+          fi
+
+          # A service must have a memory cap (go-service-deb.md); warn, do not fail.
+          if [ -d "$ROOT/usr/lib/systemd/system" ]; then
+            while read -r u; do
+              grep -q '^MemoryMax=' "$u" || echo "::warning::${u#"$ROOT"} has no MemoryMax=; see go-service-deb.md"
+            done < <(find "$ROOT/usr/lib/systemd/system" -name '*.service' -type f)
+          fi
+
+          [ ! -f LICENSE ] || cp LICENSE "$DOC/copyright"
+          [ ! -f README.md ] || cp README.md "$DOC/README.md"
+          find "$ROOT" -type d -exec chmod 0755 {} +
+          find "$DOC" -type f -exec chmod 0644 {} +
+
+          SIZE_KB="$(du -sk --exclude=DEBIAN "$ROOT" | cut -f1)"
+          {
+            echo "Package: $PACKAGE_NAME"
+            echo "Version: $VER"
+            echo "Section: net"
+            echo "Priority: optional"
+            echo "Architecture: amd64"
+            echo "Installed-Size: $SIZE_KB"
+            [ -z "$DEPENDS" ] || echo "Depends: $DEPENDS"
+            [ -z "$RECOMMENDS" ] || echo "Recommends: $RECOMMENDS"
+            echo "Maintainer: $MAINTAINER"
+            echo "Homepage: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+            echo "Description: $DESCRIPTION"
+          } > "$ROOT/DEBIAN/control"
+
+          mkdir -p release_out
+          dpkg-deb --build --root-owner-group "$ROOT" "release_out/${PACKAGE_NAME}_${VER}_amd64.deb"
+          echo "DEB=release_out/${PACKAGE_NAME}_${VER}_amd64.deb" >> "$GITHUB_ENV"
+
+      - name: Show what was built
+        run: |
+          set -euo pipefail
+          dpkg-deb --info "$DEB"
+          dpkg-deb --contents "$DEB"
+          T="$(mktemp -d)"
+          dpkg-deb --control "$DEB" "$T"
+          for f in preinst postinst prerm postrm; do
+            [ ! -f "$T/$f" ] || sh -n "$T/$f"
+          done
+
+      - name: Smoke test (install, run, remove, purge)
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y "./$DEB"
+          OUT="$("$COMMAND_NAME" $SMOKE_ARGS 2>&1)"
+          echo "$COMMAND_NAME $SMOKE_ARGS -> $OUT"
+          case "$OUT" in
+            *"$VER"*) ;;
+            *) echo "the installed command did not report version $VER; the package does not match the tag" >&2; exit 1 ;;
+          esac
+          sudo apt-get remove -y "$PACKAGE_NAME"
+          if command -v "$COMMAND_NAME" >/dev/null; then echo "$COMMAND_NAME is still installed after removing the package" >&2; exit 1; fi
+          sudo apt-get purge -y "$PACKAGE_NAME"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.package_name }}-deb
+          path: ${{ env.DEB }}
+
+      - name: Attach to the GitHub Release
+        if: inputs.publish
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ inputs.version }}
+          files: ${{ env.DEB }}
+          append_body: true
+          generate_release_notes: ${{ inputs.generate_release_notes }}
+          body: |
+
+            ## Debian / Ubuntu (amd64)
+
+            Download `${{ env.PACKAGE_NAME }}_${{ env.VER }}_amd64.deb`, then install (or upgrade) it with
+            `sudo apt install ./${{ env.PACKAGE_NAME }}_${{ env.VER }}_amd64.deb`.
+            ${{ inputs.release_note != '' && inputs.release_note || format('It is one static program and installs the `{0}` command and its systemd unit. Remove it with `sudo apt remove {1}`; your data and settings are kept until `purge`.', env.COMMAND_NAME, env.PACKAGE_NAME) }}
